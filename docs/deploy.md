@@ -1,8 +1,31 @@
 # Deploying the backend
 
 The reTerminal device fetches `DASHBOARD_URL` over HTTPS, so the backend needs a
-public HTTPS endpoint. This repo ships a [Render](https://render.com) Blueprint
-(`render.yaml`) for a one-click deploy, but any Node host works.
+public HTTPS endpoint. The backend is a normal long-running Node/Express server
+(it holds an in-memory + on-disk cache), so a container host like **Railway**
+(recommended) or Render fits it directly — no code changes, no serverless
+caveats. Config files for both are included.
+
+## Railway (recommended)
+
+1. Push this repo to GitHub.
+2. In Railway: **New Project** → **Deploy from GitHub repo** → pick this repo.
+3. In the service **Settings**, set **Root Directory** to `backend` (the app
+   lives in a subfolder). Railway then reads `backend/railway.json` and uses
+   Nixpacks → `npm install` → `npm start`, with health check `/healthz`.
+4. In **Variables**, add `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`).
+5. Generate a public domain (**Settings → Networking → Generate Domain**). You
+   get a URL like `https://inkscores-production.up.railway.app`. The device's
+   `DASHBOARD_URL` is then:
+
+   ```
+   https://inkscores-production.up.railway.app/api/dashboard.json
+   ```
+
+Railway services stay running (no idle spin-down while you have credit/usage),
+so refreshes are reliable and there's no cold-start vs. the device's 8s timeout.
+
+## Render (alternative, Blueprint)
 
 ## Render (Blueprint)
 

@@ -197,7 +197,7 @@ async function assembleFeaturedDashboard(
       ...(accent ? { accent } : {}),
       ...(oddsByAbbr ? { oddsByAbbr } : {}),
     }),
-    options.mlbStats!.getRecentForm().catch(() => undefined),
+    options.mlbStats!.getRecentForm(10).catch(() => undefined),
   ]);
 
   return assembleFeatured({

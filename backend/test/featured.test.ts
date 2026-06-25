@@ -124,11 +124,11 @@ describe("withFormColumn", () => {
     ],
   };
 
-  it("replaces the L10 column with last-5 form dots, joining on canonical abbr", () => {
-    const out = withFormColumn(table, { CWS: "WLWWL", DET: "LLWLW" });
-    expect(out.columns[4]).toBe("L5");
-    expect(out.rows[0]![4]).toBe("WLWWL"); // CHW matched via canonical CWS
-    expect(out.rows[1]![4]).toBe("LLWLW");
+  it("replaces the record column with last-10 form dots, joining on canonical abbr", () => {
+    const out = withFormColumn(table, { CWS: "WLWWLWLWWL", DET: "LLWLWWLWLW" });
+    expect(out.columns[4]).toBe("L10");
+    expect(out.rows[0]![4]).toBe("WLWWLWLWWL"); // CHW matched via canonical CWS
+    expect(out.rows[1]![4]).toBe("LLWLWWLWLW");
   });
 
   it("leaves a row untouched when no form is available", () => {

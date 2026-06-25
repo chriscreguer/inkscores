@@ -638,23 +638,54 @@ function drawLiveCard(ctx, s, x, y) {
   const outs = Number(L.outs);
   drawOuts(ctx, basesX + basesSize + 15, y + 38, Number.isFinite(outs) ? outs : 0, INK.black);
 
+  // Win probability sits near the bottom of the card; the stat lines fill the
+  // space above it and may wrap to a second line when there's room.
+  const h = cardHFor(s);
+  const winRowY = y + h - 26;
+
   const stats = (L.topPlayers || s.topPlayers || []).map((v) => String(v)).filter(Boolean);
   if (stats.length) {
     const font = "400 13px " + fam();
-    txt(ctx, fitWidth(ctx, stats.slice(0, 4).join(" · "), COL_W - 24, font), x + 12, y + 68, 13, "400", INK.black);
+    const statTop = y + 68, lineH = 15;
+    const maxLines = Math.max(1, Math.min(2, Math.floor((winRowY - statTop) / lineH)));
+    let sy = statTop;
+    for (const line of layoutStatLines(ctx, stats, COL_W - 24, font, maxLines)) {
+      txt(ctx, line, x + 12, sy, 13, "400", INK.black);
+      sy += lineH;
+    }
   }
 
-  drawWinProbabilityBar(ctx, s, x, y, L.winProbability);
+  drawWinProbabilityBar(ctx, s, x, y, L.winProbability, winRowY);
 }
 
-function drawWinProbabilityBar(ctx, s, x, y, probability) {
+// Pack stat entries (e.g. "Keith 1-2, HR") into up to maxLines, joined by " · "
+// and broken only between whole entries, with the last line ellipsis-fit.
+function layoutStatLines(ctx, stats, maxW, font, maxLines) {
+  ctx.font = font;
+  const lines = [];
+  let cur = "";
+  for (const st of stats) {
+    const candidate = cur ? cur + " · " + st : st;
+    if (cur && ctx.measureText(candidate).width > maxW) {
+      lines.push(cur);
+      cur = st;
+      if (lines.length === maxLines) { cur = ""; break; }
+    } else {
+      cur = candidate;
+    }
+  }
+  if (cur && lines.length < maxLines) lines.push(cur);
+  return lines.slice(0, maxLines).map((l) => fitWidth(ctx, l, maxW, font));
+}
+
+function drawWinProbabilityBar(ctx, s, x, y, probability, rowY) {
   const pct = Number(probability);
   if (!Number.isFinite(pct)) return;
 
   const clamped = Math.max(0, Math.min(100, pct));
   const label = teamAbbrFor(s) + " " + Math.round(clamped) + "%";
   const labelX = x + 12;
-  const rowY = y + 93;
+  if (rowY == null) rowY = y + 93;
   ctx.font = "600 11px " + fam();
   const labelW = Math.ceil(ctx.measureText(label).width);
   const barX = labelX + labelW + 9;
@@ -774,15 +805,16 @@ function drawHotCold(ctx, x, hy, s) {
   txt(ctx, fitWidth(ctx, (s.cold || []).join(", ") || "—", rightEdge - coldTextX, font), coldTextX, hy + 3, 12, "400", INK.black);
 }
 
-// Last-5 form dots: win = solid green, loss = dithered light-red. Oldest left.
+// Recent-form dots (up to 10): win = solid green, loss = dithered light-red.
+// Oldest left. A tighter dot/gap keeps ten markers inside the form column.
 function drawForm(ctx, x, y, form) {
-  const cy = y + 8, r = 4, gap = 11;
+  const cy = y + 8, r = 3.4, gap = 8;
   const s = String(form || "");
-  if (!/^[WLwl]{2,5}$/.test(s)) {
+  if (!/^[WLwl]{2,10}$/.test(s)) {
     txt(ctx, s || "—", x, y, 15, "400", INK.black);
     return;
   }
-  for (let i = 0; i < s.length && i < 5; i++) {
+  for (let i = 0; i < s.length && i < 10; i++) {
     const cx = x + r + i * gap;
     const win = s[i] === "W" || s[i] === "w";
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7);

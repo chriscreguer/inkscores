@@ -404,10 +404,11 @@ export function createMlbStatsAdapter(deps?: MlbStatsDeps): MlbStatsAdapter {
     ];
   }
 
-  async function getRecentForm(maxGames = 5): Promise<Record<string, string>> {
+  async function getRecentForm(maxGames = 10): Promise<Record<string, string>> {
     const end = now();
-    // ~18 days back comfortably covers 5 completed games per team.
-    const start = new Date(end.getTime() - 18 * 24 * 60 * 60 * 1000);
+    // ~25 days back comfortably covers 10 completed games per team (with off
+    // days / the All-Star break).
+    const start = new Date(end.getTime() - 25 * 24 * 60 * 60 * 1000);
     const [raw, abbrById] = await Promise.all([
       cache.getOrLoad(
         `mlbstats:schedule:${ymd(start)}:${ymd(end)}`,

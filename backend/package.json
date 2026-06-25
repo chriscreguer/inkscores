@@ -4,6 +4,9 @@
   "private": true,
   "description": "Backend service for the InkScores ePaper sports dashboard",
   "type": "module",
+  "engines": {
+    "node": ">=20.12"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",

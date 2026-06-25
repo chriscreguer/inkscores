@@ -103,7 +103,7 @@ export function withFormColumn(
   const colIdx = section.columns.findIndex((c) => /^(l5|l10|form)$/i.test(c));
   if (colIdx < 0) return section;
   const columns = [...section.columns];
-  columns[colIdx] = "L5";
+  columns[colIdx] = "L10";
   const rows = section.rows.map((row) => {
     const form = formByAbbr[canonicalAbbr(row[1] ?? "")];
     if (!form) return row;
