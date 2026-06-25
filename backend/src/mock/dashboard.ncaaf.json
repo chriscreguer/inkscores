@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "updatedAt": "2026-10-18T11:00:00-05:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 7200,
+  "theme": { "mode": "epaper-color", "density": "compact" },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "msu-football-card",
+      "title": "MSU Football",
+      "subtitle": "Michigan State Spartans",
+      "badge": "S",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png",
+      "status": "active",
+      "last": "W 27-24 vs IOWA",
+      "next": "Sat 3:30 @ MICH",
+      "record": "6-3",
+      "standing": "Big Ten: 8th",
+      "accent": "green"
+    },
+    {
+      "type": "standings",
+      "id": "big-ten",
+      "title": "Big Ten",
+      "columns": ["#", "Team", "Record"],
+      "highlightTeamKeys": ["msu-football"],
+      "highlightRows": [7],
+      "accent": "green",
+      "rows": [
+        ["1", "ORE", "9-0"],
+        ["2", "OSU", "8-1"],
+        ["3", "PSU", "8-1"],
+        ["4", "IU", "7-2"],
+        ["5", "MICH", "7-2"],
+        ["6", "ILL", "7-2"],
+        ["7", "IOWA", "6-3"],
+        ["8", "MSU", "6-3"]
+      ]
+    }
+  ],
+  "footer": "Updated 11:00 AM"
+}

@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "updatedAt": "2026-12-20T11:00:00-06:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 7200,
+  "theme": {
+    "mode": "epaper-color",
+    "density": "compact"
+  },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "pistons-card",
+      "title": "Pistons",
+      "subtitle": "Detroit Pistons",
+      "badge": "P",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/nba/500/det.png",
+      "status": "active",
+      "last": "W 118-109 vs ATL",
+      "next": "Tmw 7:00 vs MIL",
+      "record": "18-12",
+      "standing": "East: 5th",
+      "accent": "red"
+    },
+    {
+      "type": "teamCard",
+      "id": "msu-football-card",
+      "title": "MSU Football",
+      "subtitle": "Michigan State Spartans",
+      "badge": "S",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png",
+      "status": "active",
+      "last": "W 24-17 vs MICH",
+      "next": "Dec 28 ReliaQuest Bowl vs LSU",
+      "record": "9-3",
+      "standing": "Big Ten: 4th",
+      "accent": "green"
+    },
+    {
+      "type": "teamCard",
+      "id": "msu-basketball-card",
+      "title": "MSU Basketball",
+      "subtitle": "Michigan State Spartans",
+      "badge": "S",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png",
+      "status": "active",
+      "last": "W 80-71 vs OAK",
+      "next": "Sat 4:00 vs MINN",
+      "record": "11-2",
+      "standing": "Big Ten: 2nd",
+      "accent": "green"
+    },
+    {
+      "type": "standings",
+      "id": "eastern-conference",
+      "title": "Eastern",
+      "columns": ["#", "Team", "Record", "GB", "L5"],
+      "highlightTeamKeys": ["pistons"],
+      "highlightRows": [4],
+      "accent": "red",
+      "rows": [
+        ["1", "BOS", "24-6", "-", "WWLWW"],
+        ["2", "CLE", "22-8", "2.0", "WWWWL"],
+        ["3", "NYK", "20-10", "4.0", "WLWWL"],
+        ["4", "MIL", "19-11", "5.0", "WLWLW"],
+        ["5", "DET", "18-12", "6.0", "LWWWW"],
+        ["6", "ORL", "17-13", "7.0", "LWLWW"],
+        ["7", "MIA", "16-14", "8.0", "LWLWL"],
+        ["8", "IND", "15-15", "9.0", "WLWWL"],
+        ["9", "ATL", "14-16", "10.0", "WLWLL"],
+        ["10", "CHI", "13-17", "11.0", "LLWLW"]
+      ]
+    },
+    {
+      "type": "standings",
+      "id": "big-ten",
+      "title": "Big Ten (MBB)",
+      "columns": ["#", "Team", "Record"],
+      "highlightTeamKeys": ["msu-basketball"],
+      "highlightRows": [1],
+      "accent": "green",
+      "rows": [
+        ["1", "PUR", "12-1"],
+        ["2", "MSU", "11-2"],
+        ["3", "ILL", "11-2"],
+        ["4", "WIS", "10-3"],
+        ["5", "MICH", "10-3"],
+        ["6", "UCLA", "9-4"],
+        ["7", "OSU", "9-4"],
+        ["8", "MD", "8-5"]
+      ]
+    }
+  ],
+  "footer": "Updated 11:00 AM"
+}

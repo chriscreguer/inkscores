@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-22T12:00:00-06:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 1800,
+  "theme": {
+    "mode": "epaper-color",
+    "density": "compact"
+  },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "lions-card",
+      "title": "Lions",
+      "subtitle": "Detroit Lions",
+      "badge": "L",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/nfl/500/det.png",
+      "status": "active",
+      "last": "W 27-20 vs GB",
+      "next": "1:00 vs CHI",
+      "record": "8-3",
+      "standing": "NFC North: 1st",
+      "accent": "blue"
+    },
+    {
+      "type": "teamCard",
+      "id": "pistons-card",
+      "title": "Pistons",
+      "subtitle": "Detroit Pistons",
+      "badge": "P",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/nba/500/det.png",
+      "status": "active",
+      "last": "W 121-114 vs ORL",
+      "next": "Tmw 7:00 vs IND",
+      "record": "11-7",
+      "standing": "East: 5th",
+      "accent": "red"
+    },
+    {
+      "type": "standings",
+      "id": "nfc-north",
+      "title": "NFC North",
+      "columns": ["#", "Team", "Record"],
+      "highlightTeamKeys": ["lions"],
+      "highlightRows": [0],
+      "accent": "blue",
+      "rows": [
+        ["1", "DET", "8-3"],
+        ["2", "MIN", "7-4"],
+        ["3", "GB", "7-4"],
+        ["4", "CHI", "4-7"]
+      ]
+    },
+    {
+      "type": "standings",
+      "id": "eastern-conference",
+      "title": "Eastern",
+      "columns": ["#", "Team", "Record", "GB", "L5"],
+      "highlightTeamKeys": ["pistons"],
+      "highlightRows": [4],
+      "accent": "red",
+      "rows": [
+        ["1", "BOS", "14-4", "-", "WWLWW"],
+        ["2", "CLE", "13-5", "1.0", "WWWWL"],
+        ["3", "NYK", "12-6", "2.0", "WLWWL"],
+        ["4", "MIL", "11-7", "3.0", "WLWLW"],
+        ["5", "DET", "11-7", "3.0", "LWWWW"],
+        ["6", "ORL", "10-8", "4.0", "LWLWW"],
+        ["7", "MIA", "9-9", "5.0", "LWLWL"],
+        ["8", "IND", "9-9", "5.0", "WLWWL"]
+      ]
+    }
+  ],
+  "footer": "Updated 12:00 PM"
+}

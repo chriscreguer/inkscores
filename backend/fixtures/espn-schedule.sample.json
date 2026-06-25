@@ -1,0 +1,80 @@
+{
+  "team": { "abbreviation": "DET", "displayName": "Detroit Tigers" },
+  "events": [
+    {
+      "id": "1",
+      "date": "2026-06-18T23:40Z",
+      "name": "Cleveland Guardians at Detroit Tigers",
+      "seasonType": { "id": "2", "name": "Regular Season" },
+      "competitions": [
+        {
+          "status": { "type": { "state": "post", "completed": true, "shortDetail": "Final" } },
+          "competitors": [
+            { "homeAway": "home", "team": { "abbreviation": "DET" }, "score": { "value": 2, "displayValue": "2" }, "winner": false },
+            { "homeAway": "away", "team": { "abbreviation": "CLE" }, "score": { "value": 4, "displayValue": "4" }, "winner": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "date": "2026-06-19T23:40Z",
+      "name": "Cleveland Guardians at Detroit Tigers",
+      "seasonType": { "id": "2", "name": "Regular Season" },
+      "competitions": [
+        {
+          "status": { "type": { "state": "post", "completed": true, "shortDetail": "Final" } },
+          "competitors": [
+            { "homeAway": "home", "team": { "abbreviation": "DET" }, "score": { "value": 5, "displayValue": "5" }, "winner": true },
+            { "homeAway": "away", "team": { "abbreviation": "CLE" }, "score": { "value": 3, "displayValue": "3" }, "winner": false }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pp",
+      "date": "2026-06-20T01:00Z",
+      "name": "Cleveland Guardians at Detroit Tigers",
+      "seasonType": { "id": "2", "name": "Regular Season" },
+      "competitions": [
+        {
+          "status": { "type": { "state": "post", "completed": false, "shortDetail": "Postponed" } },
+          "competitors": [
+            { "homeAway": "home", "team": { "abbreviation": "DET" }, "score": { "value": 0, "displayValue": "0" } },
+            { "homeAway": "away", "team": { "abbreviation": "CLE" }, "score": { "value": 0, "displayValue": "0" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "date": "2026-06-20T23:40Z",
+      "name": "Minnesota Twins at Detroit Tigers",
+      "seasonType": { "id": "2", "name": "Regular Season" },
+      "competitions": [
+        {
+          "status": { "type": { "state": "pre", "completed": false, "shortDetail": "6/20 - 6:40 PM EDT" } },
+          "competitors": [
+            { "homeAway": "home", "team": { "abbreviation": "DET" } },
+            { "homeAway": "away", "team": { "abbreviation": "MIN" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "date": "2026-06-23T17:10Z",
+      "name": "Detroit Tigers at Chicago White Sox",
+      "seasonType": { "id": "2", "name": "Regular Season" },
+      "competitions": [
+        {
+          "status": { "type": { "state": "pre", "completed": false, "shortDetail": "6/23 - 1:10 PM EDT" } },
+          "competitors": [
+            { "homeAway": "home", "team": { "abbreviation": "CHW" } },
+            { "homeAway": "away", "team": { "abbreviation": "DET" } }
+          ]
+        }
+      ]
+    }
+  ]
+}

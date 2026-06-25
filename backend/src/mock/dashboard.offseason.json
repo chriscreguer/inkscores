@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "updatedAt": "2026-07-15T08:00:00-05:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 21600,
+  "theme": { "mode": "epaper-color", "density": "compact" },
+  "sections": [
+    {
+      "type": "message",
+      "id": "offseason",
+      "title": "No active teams",
+      "body": "All watched teams are between seasons. Tigers & Cubs return in late March, Pistons in October, MSU football in August, MSU basketball in November."
+    }
+  ],
+  "footer": "Updated 8:00 AM"
+}

@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-14T11:00:00-06:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 7200,
+  "theme": {
+    "mode": "epaper-color",
+    "density": "compact"
+  },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "pistons-card",
+      "title": "Pistons",
+      "subtitle": "Detroit Pistons",
+      "badge": "P",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/nba/500/det.png",
+      "status": "active",
+      "last": "W 115-108 vs CHI",
+      "next": "Tmw 7:00 vs NYK",
+      "record": "8-5",
+      "standing": "East: 5th",
+      "accent": "red"
+    },
+    {
+      "type": "teamCard",
+      "id": "msu-football-card",
+      "title": "MSU Football",
+      "subtitle": "Michigan State Spartans",
+      "badge": "S",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png",
+      "status": "active",
+      "last": "W 31-24 vs IND",
+      "next": "Sat 3:30 @ PSU",
+      "record": "7-3",
+      "standing": "Big Ten: 6th",
+      "accent": "green"
+    },
+    {
+      "type": "standings",
+      "id": "eastern-conference",
+      "title": "Eastern",
+      "columns": ["#", "Team", "Record", "GB", "L5"],
+      "highlightTeamKeys": ["pistons"],
+      "highlightRows": [4],
+      "accent": "red",
+      "rows": [
+        ["1", "BOS", "11-2", "-", "WWLWW"],
+        ["2", "CLE", "10-3", "1.0", "WWWWL"],
+        ["3", "NYK", "9-4", "2.0", "WLWWL"],
+        ["4", "MIL", "8-5", "3.0", "WLWLW"],
+        ["5", "DET", "8-5", "3.0", "LWWWW"],
+        ["6", "ORL", "7-6", "4.0", "LWLWW"],
+        ["7", "MIA", "7-6", "4.0", "LWLWL"],
+        ["8", "IND", "6-7", "5.0", "WLWWL"],
+        ["9", "ATL", "6-7", "5.0", "WLWLL"],
+        ["10", "PHI", "5-8", "6.0", "LLWLW"]
+      ]
+    },
+    {
+      "type": "standings",
+      "id": "big-ten",
+      "title": "Big Ten",
+      "columns": ["#", "Team", "Record"],
+      "highlightTeamKeys": ["msu-football"],
+      "highlightRows": [5],
+      "accent": "green",
+      "rows": [
+        ["1", "ORE", "10-0"],
+        ["2", "OSU", "9-1"],
+        ["3", "IU", "9-1"],
+        ["4", "PSU", "8-2"],
+        ["5", "MICH", "7-3"],
+        ["6", "MSU", "7-3"],
+        ["7", "ILL", "6-4"],
+        ["8", "IOWA", "6-4"]
+      ]
+    }
+  ],
+  "footer": "Updated 11:00 AM"
+}

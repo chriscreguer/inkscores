@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "updatedAt": "2026-01-28T10:30:00-06:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 7200,
+  "theme": {
+    "mode": "epaper-color",
+    "density": "compact"
+  },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "pistons-card",
+      "title": "Pistons",
+      "subtitle": "Detroit Pistons",
+      "badge": "P",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/nba/500/det.png",
+      "status": "active",
+      "last": "L 102-110 vs BOS",
+      "next": "Tmw 7:00 vs MIL",
+      "record": "24-22",
+      "standing": "East: 7th",
+      "accent": "red"
+    },
+    {
+      "type": "teamCard",
+      "id": "msu-basketball-card",
+      "title": "MSU Basketball",
+      "subtitle": "Michigan State Spartans",
+      "badge": "S",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png",
+      "status": "active",
+      "last": "W 75-66 vs OSU",
+      "next": "Wed 7:00 @ ILL",
+      "record": "16-4",
+      "standing": "Big Ten: 3rd",
+      "accent": "green"
+    },
+    {
+      "type": "standings",
+      "id": "eastern-conference",
+      "title": "Eastern",
+      "columns": ["#", "Team", "Record", "GB", "L5"],
+      "highlightTeamKeys": ["pistons"],
+      "highlightRows": [6],
+      "accent": "red",
+      "rows": [
+        ["1", "BOS", "36-12", "-", "WWLWW"],
+        ["2", "CLE", "34-14", "2.0", "WWWWL"],
+        ["3", "NYK", "31-17", "5.0", "WLWWL"],
+        ["4", "MIL", "29-19", "7.0", "WLWLW"],
+        ["5", "ORL", "28-20", "8.0", "LWWLW"],
+        ["6", "MIA", "26-22", "10.0", "LWLWW"],
+        ["7", "DET", "24-22", "11.0", "WWLWL"],
+        ["8", "IND", "24-24", "12.0", "WLLWL"],
+        ["9", "ATL", "23-25", "13.0", "WLWLW"],
+        ["10", "CHI", "21-27", "15.0", "LLWLW"]
+      ]
+    },
+    {
+      "type": "standings",
+      "id": "big-ten",
+      "title": "Big Ten",
+      "columns": ["#", "Team", "Record"],
+      "highlightTeamKeys": ["msu-basketball"],
+      "highlightRows": [2],
+      "accent": "green",
+      "rows": [
+        ["1", "PUR", "18-2"],
+        ["2", "ILL", "16-4"],
+        ["3", "MSU", "16-4"],
+        ["4", "WIS", "15-5"],
+        ["5", "MICH", "15-5"],
+        ["6", "UCLA", "14-6"],
+        ["7", "OSU", "13-7"],
+        ["8", "MD", "13-7"]
+      ]
+    }
+  ],
+  "footer": "Updated 10:30 AM"
+}

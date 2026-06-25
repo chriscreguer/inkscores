@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "updatedAt": "2026-01-22T10:30:00-05:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 7200,
+  "theme": { "mode": "epaper-color", "density": "compact" },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "msu-basketball-card",
+      "title": "MSU Basketball",
+      "subtitle": "Michigan State Spartans",
+      "badge": "S",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png",
+      "status": "active",
+      "last": "W 75-66 vs OSU",
+      "next": "Wed 7:00 @ ILL",
+      "record": "16-4",
+      "standing": "Big Ten: 3rd",
+      "accent": "green"
+    },
+    {
+      "type": "standings",
+      "id": "big-ten",
+      "title": "Big Ten",
+      "columns": ["#", "Team", "Record"],
+      "highlightTeamKeys": ["msu-basketball"],
+      "highlightRows": [2],
+      "accent": "green",
+      "rows": [
+        ["1", "PUR", "18-2"],
+        ["2", "ILL", "16-4"],
+        ["3", "MSU", "16-4"],
+        ["4", "WIS", "15-5"],
+        ["5", "MICH", "15-5"],
+        ["6", "UCLA", "14-6"],
+        ["7", "OSU", "13-7"],
+        ["8", "MD", "13-7"]
+      ]
+    }
+  ],
+  "footer": "Updated 10:30 AM"
+}

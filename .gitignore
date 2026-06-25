@@ -1,0 +1,35 @@
+# Node
+node_modules/
+dist/
+*.log
+
+# Firmware secrets & build output
+firmware/src/config.h
+firmware/.pio/
+firmware/.vscode/
+
+# Captured ESPN reference payloads (large, regenerable via docs/data-sources.md).
+# The small hand-written *.sample.json fixtures ARE committed (tests use them).
+backend/fixtures/mlb-*.json
+backend/fixtures/nba-*.json
+backend/fixtures/ncaaf-*.json
+backend/fixtures/ncaamb-*.json
+
+# ...but these specific captured fixtures ARE required by the test suite.
+!backend/fixtures/mlb-scoreboard.json
+!backend/fixtures/mlb-statsapi-standings.json
+!backend/fixtures/mlb-statsapi-teams.json
+
+# Downloaded logo sources (regenerate via tools/gen-logos.py; logos.h is committed)
+tools/_src/
+
+# OS
+.DS_Store
+
+# secrets
+.env
+backend/.env
+
+# runtime caches
+.cache/
+backend/.cache/

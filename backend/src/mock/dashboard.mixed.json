@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "updatedAt": "2026-03-15T18:30:00-05:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 1800,
+  "theme": {
+    "mode": "epaper-color",
+    "density": "compact"
+  },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "pistons-card",
+      "title": "Pistons",
+      "subtitle": "Detroit Pistons",
+      "badge": "P",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/nba/500/det.png",
+      "status": "active",
+      "last": "W 112-104 vs CHI",
+      "next": "7:00 vs MIL",
+      "record": "31-34",
+      "standing": "East: 12th",
+      "accent": "red"
+    },
+    {
+      "type": "teamCard",
+      "id": "msu-basketball-card",
+      "title": "MSU Basketball",
+      "subtitle": "Michigan State Spartans",
+      "badge": "S",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png",
+      "status": "active",
+      "last": "W 73-68 vs PUR",
+      "next": "Fri 9:40 vs MARQ",
+      "record": "24-7",
+      "standing": "NCAA Tournament: Round of 32",
+      "accent": "green"
+    },
+    {
+      "type": "standings",
+      "id": "eastern-conference",
+      "title": "Eastern",
+      "columns": ["#", "Team", "Record", "GB", "L5"],
+      "highlightTeamKeys": ["pistons"],
+      "highlightRows": [10],
+      "accent": "red",
+      "rows": [
+        ["1", "BOS", "52-13", "-", "WWLWW"],
+        ["2", "MIL", "44-21", "8.0", "WWLWL"],
+        ["3", "CLE", "43-22", "9.0", "WLWWW"],
+        ["4", "NYK", "42-23", "10.0", "WLWLW"],
+        ["5", "ORL", "40-25", "12.0", "LWWLW"],
+        ["6", "IND", "38-27", "14.0", "LWLWW"],
+        ["7", "MIA", "36-29", "16.0", "LWLWL"],
+        ["8", "PHI", "35-30", "17.0", "WLWWL"],
+        ["9", "ATL", "32-33", "20.0", "WLWLL"],
+        ["10", "CHI", "31-34", "21.0", "LLWLW"],
+        ["12", "DET", "31-34", "21.0", "LWLWW"]
+      ]
+    },
+    {
+      "type": "message",
+      "id": "march-madness",
+      "title": "March Madness",
+      "body": "MSU plays Marquette in the Round of 32, Friday 9:40 PM."
+    }
+  ],
+  "footer": "Updated 6:30 PM"
+}

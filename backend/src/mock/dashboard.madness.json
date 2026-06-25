@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "updatedAt": "2026-03-21T12:00:00-05:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 1800,
+  "theme": { "mode": "epaper-color", "density": "compact" },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "msu-basketball-card",
+      "title": "MSU Basketball",
+      "subtitle": "Michigan State Spartans",
+      "badge": "S",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png",
+      "status": "active",
+      "last": "W 69-61 vs NMSU",
+      "next": "Sun 5:15 vs MARQ",
+      "record": "24-7",
+      "standing": "NCAA Tournament",
+      "accent": "green"
+    },
+    {
+      "type": "message",
+      "id": "march-madness",
+      "title": "March Madness — East Region",
+      "body": ""
+    }
+  ],
+  "footer": "Updated 12:00 PM"
+}

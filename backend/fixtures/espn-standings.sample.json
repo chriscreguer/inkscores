@@ -1,0 +1,22 @@
+{
+  "name": "Major League Baseball",
+  "children": [
+    {
+      "name": "American League",
+      "children": [
+        {
+          "name": "American League Central",
+          "standings": {
+            "entries": [
+              { "team": { "abbreviation": "CLE" }, "stats": [ { "name": "wins", "displayValue": "44" }, { "name": "losses", "displayValue": "31" }, { "name": "gamesBehind", "displayValue": "-" } ] },
+              { "team": { "abbreviation": "DET" }, "stats": [ { "name": "wins", "displayValue": "42" }, { "name": "losses", "displayValue": "34" }, { "name": "gamesBehind", "displayValue": "2.5" } ] },
+              { "team": { "abbreviation": "KC" }, "stats": [ { "name": "wins", "displayValue": "38" }, { "name": "losses", "displayValue": "38" }, { "name": "gamesBehind", "displayValue": "6.5" } ] },
+              { "team": { "abbreviation": "MIN" }, "stats": [ { "name": "wins", "displayValue": "36" }, { "name": "losses", "displayValue": "40" }, { "name": "gamesBehind", "displayValue": "8.5" } ] },
+              { "team": { "abbreviation": "CHW" }, "stats": [ { "name": "wins", "displayValue": "28" }, { "name": "losses", "displayValue": "48" }, { "name": "gamesBehind", "displayValue": "16.5" } ] }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

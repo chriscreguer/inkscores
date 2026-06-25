@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "updatedAt": "2026-02-10T09:10:00-05:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 7200,
+  "theme": {
+    "mode": "epaper-color",
+    "density": "compact"
+  },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "pistons-card",
+      "title": "Pistons",
+      "subtitle": "Detroit Pistons",
+      "badge": "P",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/nba/500/det.png",
+      "status": "active",
+      "last": "W 118-110 vs CHI",
+      "next": "Tmw 7:00 vs MIL",
+      "record": "32-23",
+      "standing": "East: 6th",
+      "accent": "red"
+    },
+    {
+      "type": "standings",
+      "id": "eastern-conference",
+      "title": "Eastern",
+      "columns": ["#", "Team", "Record", "GB", "L5"],
+      "highlightTeamKeys": ["pistons"],
+      "highlightRows": [5],
+      "accent": "red",
+      "rows": [
+        ["1", "BOS", "40-15", "-", "WWLWW"],
+        ["2", "CLE", "38-17", "2.0", "WWWWL"],
+        ["3", "NYK", "36-19", "4.0", "WLWWL"],
+        ["4", "MIL", "34-21", "6.0", "WLWLW"],
+        ["5", "ORL", "33-22", "7.0", "LWWLW"],
+        ["6", "DET", "32-23", "8.0", "WWLWW"],
+        ["7", "IND", "31-24", "9.0", "WWLWL"],
+        ["8", "MIA", "30-25", "10.0", "WLLWL"],
+        ["9", "ATL", "28-27", "12.0", "WLWLW"],
+        ["10", "CHI", "26-29", "14.0", "LLWLW"]
+      ]
+    }
+  ],
+  "footer": "Updated 9:10 AM"
+}

@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-24T08:05:00-05:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 7200,
+  "theme": {
+    "mode": "epaper-color",
+    "density": "compact",
+    "layout": "team-comparison",
+    "cardHeight": 132
+  },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "tigers-card",
+      "title": "Tigers",
+      "subtitle": "Detroit Tigers",
+      "badge": "D",
+      "teamAbbr": "DET",
+      "scorebugOpponent": "NYY",
+      "cardVariant": "scorebug",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/mlb/500/det.png",
+      "status": "active",
+      "last": "L 3-2 vs NYY",
+      "lastGame": { "date": "2026-06-23T23:40:00-05:00" },
+      "next": "6:40 vs MIN",
+      "record": "42-34",
+      "standing": "AL Central: 2nd, 2.5 GB",
+      "accent": "blue",
+      "summary": "Blew early 2-0 lead; Casey Mize still struggling, Dillon Dingler stayed hot, Ben Malgeri impressed in MLB debut.",
+      "hot": ["Dingler", "Malgeri", "Greene"],
+      "cold": ["Mize", "Baez"]
+    },
+    {
+      "type": "teamCard",
+      "id": "cubs-card",
+      "title": "Cubs",
+      "subtitle": "Chicago Cubs",
+      "badge": "C",
+      "teamAbbr": "CHC",
+      "scorebugOpponent": "STL",
+      "cardVariant": "team-result",
+      "cardHeight": 176,
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/mlb/500/chc.png",
+      "status": "active",
+      "last": "L 4-2 vs STL",
+      "lastGame": { "date": "2026-06-23T19:20:00-05:00" },
+      "next": "1:20 vs PIT",
+      "record": "39-37",
+      "standing": "NL Central: 3rd, 4.5 GB",
+      "accent": "blue",
+      "summary": "Dropped another to STL; Busch and Suzuki still carry the thump, while the cold bats need to wake up before PIT."
+    },
+    {
+      "type": "standings",
+      "id": "al-central",
+      "title": "AL Central",
+      "columns": ["#", "Team", "Record", "GB", "L5"],
+      "highlightTeamKeys": ["tigers"],
+      "highlightRows": [1],
+      "accent": "blue",
+      "rows": [
+        ["1", "CLE", "44-31", "-", "LWLWW"],
+        ["2", "DET", "42-34", "2.5", "WWWWL"],
+        ["3", "KC", "38-38", "6.5", "WLWWL"],
+        ["4", "MIN", "36-40", "8.5", "WLWLL"],
+        ["5", "CWS", "28-48", "16.5", "LLWLW"]
+      ]
+    },
+    {
+      "id": "al-playoff",
+      "title": "AL Playoff",
+      "columns": ["#", "Team", "Record", "GB", "WCGB", "P%"],
+      "highlightTeamKeys": ["tigers"],
+      "highlightRows": [6],
+      "accent": "blue",
+      "dividerAfter": 3,
+      "cutoffAfter": 6,
+      "type": "standings",
+      "rows": [
+        ["1", "NYY", "45-30", "-", "+4.0", "99"],
+        ["2", "CLE", "44-31", "-", "+3.0", "96"],
+        ["3", "HOU", "43-32", "-", "+2.0", "91"],
+        ["4", "BOS", "44-32", "1.5", "+2.0", "84"],
+        ["5", "SEA", "43-33", "0.5", "+1.0", "70"],
+        ["6", "TOR", "42-34", "3.5", "-", "55"],
+        ["9", "DET", "39-37", "5.5", "3.0", "28"]
+      ]
+    },
+    {
+      "id": "nl-playoff",
+      "title": "NL Playoff",
+      "columns": ["#", "Team", "Record", "GB", "L5", "P%"],
+      "highlightTeamKeys": ["cubs"],
+      "highlightRows": [7],
+      "accent": "blue",
+      "dividerAfter": 3,
+      "cutoffAfter": 6,
+      "type": "standings",
+      "rows": [
+        ["1", "LAD", "48-28", "-", "WWWLW", "99"],
+        ["2", "PHI", "45-30", "-", "WLWWW", "96"],
+        ["3", "MIL", "43-32", "-", "WWLWW", "88"],
+        ["4", "SD", "43-33", "+2.0", "LWWLW", "82"],
+        ["5", "SF", "42-34", "+1.0", "WLWWL", "66"],
+        ["6", "ARI", "41-35", "-", "WWLLW", "52"],
+        ["7", "NYM", "40-36", "1.0", "LWLWW", "34"],
+        ["8", "CHC", "39-37", "2.0", "WLWWL", "24"],
+        ["9", "STL", "38-38", "3.0", "WWLWL", "18"],
+        ["10", "ATL", "37-39", "4.0", "WLLWW", "12"]
+      ]
+    }
+  ],
+  "footer": "Updated 8:05 AM"
+}

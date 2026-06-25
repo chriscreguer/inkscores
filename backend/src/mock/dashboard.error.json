@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-21T09:05:00-05:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 3600,
+  "theme": { "mode": "epaper-color", "density": "compact" },
+  "sections": [
+    {
+      "type": "message",
+      "id": "data-error",
+      "title": "Sports data unavailable",
+      "body": "Could not reach the scores service. Showing cached data if available. Last attempt 9:05 AM."
+    }
+  ],
+  "footer": "Data issue"
+}

@@ -1,0 +1,45 @@
+{
+  "name": "Major League Baseball",
+  "children": [
+    {
+      "name": "American League",
+      "children": [
+        { "name": "American League East", "standings": { "entries": [
+          { "team": { "abbreviation": "NYY" }, "stats": [ { "name": "wins", "displayValue": "50" }, { "name": "losses", "displayValue": "30" }, { "name": "winPercent", "displayValue": ".625" } ] },
+          { "team": { "abbreviation": "BAL" }, "stats": [ { "name": "wins", "displayValue": "45" }, { "name": "losses", "displayValue": "35" }, { "name": "winPercent", "displayValue": ".563" } ] },
+          { "team": { "abbreviation": "TB" }, "stats": [ { "name": "wins", "displayValue": "40" }, { "name": "losses", "displayValue": "40" }, { "name": "winPercent", "displayValue": ".500" } ] }
+        ] } },
+        { "name": "American League Central", "standings": { "entries": [
+          { "team": { "abbreviation": "CLE" }, "stats": [ { "name": "wins", "displayValue": "48" }, { "name": "losses", "displayValue": "32" }, { "name": "winPercent", "displayValue": ".600" } ] },
+          { "team": { "abbreviation": "DET" }, "stats": [ { "name": "wins", "displayValue": "46" }, { "name": "losses", "displayValue": "34" }, { "name": "winPercent", "displayValue": ".575" } ] },
+          { "team": { "abbreviation": "KC" }, "stats": [ { "name": "wins", "displayValue": "40" }, { "name": "losses", "displayValue": "40" }, { "name": "winPercent", "displayValue": ".500" } ] }
+        ] } },
+        { "name": "American League West", "standings": { "entries": [
+          { "team": { "abbreviation": "HOU" }, "stats": [ { "name": "wins", "displayValue": "47" }, { "name": "losses", "displayValue": "33" }, { "name": "winPercent", "displayValue": ".588" } ] },
+          { "team": { "abbreviation": "SEA" }, "stats": [ { "name": "wins", "displayValue": "44" }, { "name": "losses", "displayValue": "36" }, { "name": "winPercent", "displayValue": ".550" } ] },
+          { "team": { "abbreviation": "TEX" }, "stats": [ { "name": "wins", "displayValue": "42" }, { "name": "losses", "displayValue": "38" }, { "name": "winPercent", "displayValue": ".525" } ] }
+        ] } }
+      ]
+    },
+    {
+      "name": "National League",
+      "children": [
+        { "name": "National League East", "standings": { "entries": [
+          { "team": { "abbreviation": "PHI" }, "stats": [ { "name": "wins", "displayValue": "49" }, { "name": "losses", "displayValue": "31" }, { "name": "winPercent", "displayValue": ".613" } ] },
+          { "team": { "abbreviation": "ATL" }, "stats": [ { "name": "wins", "displayValue": "44" }, { "name": "losses", "displayValue": "36" }, { "name": "winPercent", "displayValue": ".550" } ] },
+          { "team": { "abbreviation": "NYM" }, "stats": [ { "name": "wins", "displayValue": "41" }, { "name": "losses", "displayValue": "39" }, { "name": "winPercent", "displayValue": ".513" } ] }
+        ] } },
+        { "name": "National League Central", "standings": { "entries": [
+          { "team": { "abbreviation": "MIL" }, "stats": [ { "name": "wins", "displayValue": "47" }, { "name": "losses", "displayValue": "33" }, { "name": "winPercent", "displayValue": ".588" } ] },
+          { "team": { "abbreviation": "CHC" }, "stats": [ { "name": "wins", "displayValue": "43" }, { "name": "losses", "displayValue": "37" }, { "name": "winPercent", "displayValue": ".538" } ] },
+          { "team": { "abbreviation": "STL" }, "stats": [ { "name": "wins", "displayValue": "42" }, { "name": "losses", "displayValue": "38" }, { "name": "winPercent", "displayValue": ".525" } ] }
+        ] } },
+        { "name": "National League West", "standings": { "entries": [
+          { "team": { "abbreviation": "LAD" }, "stats": [ { "name": "wins", "displayValue": "52" }, { "name": "losses", "displayValue": "28" }, { "name": "winPercent", "displayValue": ".650" } ] },
+          { "team": { "abbreviation": "SD" }, "stats": [ { "name": "wins", "displayValue": "45" }, { "name": "losses", "displayValue": "35" }, { "name": "winPercent", "displayValue": ".563" } ] },
+          { "team": { "abbreviation": "SF" }, "stats": [ { "name": "wins", "displayValue": "43" }, { "name": "losses", "displayValue": "37" }, { "name": "winPercent", "displayValue": ".538" } ] }
+        ] } }
+      ]
+    }
+  ]
+}

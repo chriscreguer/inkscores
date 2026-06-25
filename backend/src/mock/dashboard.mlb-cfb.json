@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "updatedAt": "2026-09-19T12:00:00-05:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 7200,
+  "theme": {
+    "mode": "epaper-color",
+    "density": "compact"
+  },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "tigers-card",
+      "title": "Tigers",
+      "subtitle": "Detroit Tigers",
+      "badge": "D",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/mlb/500/det.png",
+      "status": "active",
+      "last": "W 6-3 vs MIN",
+      "next": "7:10 vs KC",
+      "record": "84-68",
+      "standing": "AL Central: 2nd, 3.0 GB",
+      "accent": "blue"
+    },
+    {
+      "type": "teamCard",
+      "id": "msu-football-card",
+      "title": "MSU Football",
+      "subtitle": "Michigan State Spartans",
+      "badge": "S",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png",
+      "status": "active",
+      "last": "W 28-21 vs BUF",
+      "next": "Sat 12:00 vs OSU",
+      "record": "3-1",
+      "standing": "Big Ten: 5th",
+      "accent": "green"
+    },
+    {
+      "type": "standings",
+      "id": "al-central",
+      "title": "AL Central",
+      "columns": ["#", "Team", "Record", "GB", "L5"],
+      "highlightTeamKeys": ["tigers"],
+      "highlightRows": [1],
+      "accent": "blue",
+      "rows": [
+        ["1", "CLE", "87-65", "-", "LWLWW"],
+        ["2", "DET", "84-68", "3.0", "WWWWL"],
+        ["3", "KC", "80-72", "7.0", "WLWWL"],
+        ["4", "MIN", "76-76", "11.0", "WLWLL"],
+        ["5", "CWS", "62-90", "25.0", "LLWLW"]
+      ]
+    },
+    {
+      "type": "standings",
+      "id": "big-ten",
+      "title": "Big Ten",
+      "columns": ["#", "Team", "Record"],
+      "highlightTeamKeys": ["msu-football"],
+      "highlightRows": [4],
+      "accent": "green",
+      "rows": [
+        ["1", "ORE", "4-0"],
+        ["2", "OSU", "4-0"],
+        ["3", "PSU", "4-0"],
+        ["4", "IU", "3-1"],
+        ["5", "MSU", "3-1"],
+        ["6", "MICH", "3-1"],
+        ["7", "ILL", "3-1"],
+        ["8", "IOWA", "2-2"]
+      ]
+    }
+  ],
+  "footer": "Updated 12:00 PM"
+}

@@ -1,0 +1,115 @@
+{
+  "version": 1,
+  "updatedAt": "2026-06-20T08:05:00-05:00",
+  "timezone": "America/Chicago",
+  "refreshAfterSeconds": 7200,
+  "theme": {
+    "mode": "epaper-color",
+    "density": "compact"
+  },
+  "sections": [
+    {
+      "type": "teamCard",
+      "id": "tigers-card",
+      "title": "Tigers",
+      "subtitle": "Detroit Tigers",
+      "badge": "D",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/mlb/500/det.png",
+      "status": "active",
+      "last": "W 5-3 vs CLE",
+      "next": "6:40 vs MIN",
+      "record": "42-34",
+      "standing": "AL Central: 2nd, 2.5 GB",
+      "accent": "blue"
+    },
+    {
+      "type": "teamCard",
+      "id": "cubs-card",
+      "title": "Cubs",
+      "subtitle": "Chicago Cubs",
+      "badge": "C",
+      "logoUrl": "https://a.espncdn.com/i/teamlogos/mlb/500/chc.png",
+      "status": "active",
+      "last": "L 4-2 vs STL",
+      "next": "1:20 vs PIT",
+      "record": "39-37",
+      "standing": "NL Central: 3rd, 4.5 GB",
+      "accent": "blue"
+    },
+    {
+      "type": "standings",
+      "id": "al-central",
+      "title": "AL Central",
+      "columns": ["#", "Team", "Record", "GB", "L5"],
+      "highlightTeamKeys": ["tigers"],
+      "highlightRows": [1],
+      "accent": "blue",
+      "rows": [
+        ["1", "CLE", "44-31", "-", "LWLWW"],
+        ["2", "DET", "42-34", "2.5", "WWWWL"],
+        ["3", "KC", "38-38", "6.5", "WLWWL"],
+        ["4", "MIN", "36-40", "8.5", "WLWLL"],
+        ["5", "CWS", "28-48", "16.5", "LLWLW"]
+      ]
+    },
+    {
+      "type": "standings",
+      "id": "nl-central",
+      "title": "NL Central",
+      "columns": ["#", "Team", "Record", "GB", "L5"],
+      "highlightTeamKeys": ["cubs"],
+      "highlightRows": [2],
+      "accent": "blue",
+      "rows": [
+        ["1", "MIL", "43-32", "-", "WWLWW"],
+        ["2", "STL", "41-35", "2.5", "WWLWL"],
+        ["3", "CHC", "39-37", "4.5", "WLWWL"],
+        ["4", "CIN", "36-40", "7.5", "WLWLL"],
+        ["5", "PIT", "31-45", "12.5", "LLWLL"]
+      ]
+    },
+    {
+      "id": "al-playoff",
+      "title": "AL Playoff",
+      "columns": ["#", "Team", "Record", "GB", "Odds"],
+      "highlightTeamKeys": ["tigers"],
+      "highlightRows": [7],
+      "accent": "blue",
+      "dividerAfter": 3,
+      "cutoffAfter": 6,
+      "type": "standings",
+      "rows": [
+        ["1", "NYY", "45-30", "-", "99%"],
+        ["2", "CLE", "44-31", "-", "97%"],
+        ["3", "HOU", "43-32", "-", "95%"],
+        ["4", "BOS", "44-32", "+2.0", "88%"],
+        ["5", "SEA", "43-33", "+1.0", "72%"],
+        ["6", "TOR", "42-34", "-", "54%"],
+        ["7", "TEX", "41-35", "1.0", "31%"],
+        ["9", "DET", "39-37", "3.0", "12%"]
+      ]
+    },
+    {
+      "id": "nl-playoff",
+      "title": "NL Playoff",
+      "columns": ["#", "Team", "Record", "GB", "Odds"],
+      "highlightTeamKeys": ["cubs"],
+      "highlightRows": [7],
+      "accent": "blue",
+      "dividerAfter": 3,
+      "cutoffAfter": 6,
+      "type": "standings",
+      "rows": [
+        ["1", "LAD", "48-28", "-", "99%"],
+        ["2", "PHI", "45-30", "-", "96%"],
+        ["3", "MIL", "43-32", "-", "92%"],
+        ["4", "SD", "43-33", "+2.0", "84%"],
+        ["5", "SF", "42-34", "+1.0", "68%"],
+        ["6", "ARI", "41-35", "-", "51%"],
+        ["7", "NYM", "40-36", "1.0", "28%"],
+        ["9", "CHC", "39-37", "3.0", "15%"]
+      ]
+    }
+  ],
+  "footer": "Updated 8:05 AM"
+}
