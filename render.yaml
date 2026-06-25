@@ -1,0 +1,27 @@
+# Render Blueprint for the InkScores backend.
+#
+# Deploy: push this repo to GitHub, then in the Render dashboard choose
+# "New +" -> "Blueprint" and point it at this repo. Render reads this file,
+# creates the service, and gives you a stable HTTPS URL. Set OPENAI_API_KEY
+# in the service's Environment tab (it is intentionally not stored here).
+#
+# Your device's DASHBOARD_URL then becomes:
+#   https://<your-service>.onrender.com/api/dashboard.json
+services:
+  - type: web
+    name: inkscores-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      # Set this in the Render dashboard (Environment tab); never commit a key.
+      - key: OPENAI_API_KEY
+        sync: false
+      # Optional: override the editorial model (defaults to gpt-4o-mini).
+      - key: OPENAI_MODEL
+        sync: false
+      - key: NODE_VERSION
+        value: "20.19.2"
