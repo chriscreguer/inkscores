@@ -192,26 +192,22 @@ describe("createMlbStatsAdapter", () => {
 });
 
 describe("hot/cold from real stats", () => {
+  // Roster-hydrate shape: roster[].person.stats[].splits[].stat (deduped by id).
+  const rosterEntry = (id: number, fullName: string, stat: Record<string, unknown>) => ({
+    person: { id, fullName, stats: [{ splits: [{ stat }] }] },
+  });
   const hitting = {
-    stats: [
-      {
-        splits: [
-          { player: { fullName: "Riley Greene" }, stat: { atBats: 40, ops: "1.050" } },
-          { player: { fullName: "Spencer Torkelson" }, stat: { atBats: 38, ops: "0.480" } },
-          { player: { fullName: "Bench Guy" }, stat: { atBats: 5, ops: "1.400" } }, // too few AB
-        ],
-      },
+    roster: [
+      rosterEntry(1, "Riley Greene", { atBats: 40, ops: "1.050" }),
+      rosterEntry(2, "Spencer Torkelson", { atBats: 38, ops: "0.480" }),
+      rosterEntry(3, "Bench Guy", { atBats: 5, ops: "1.400" }), // too few AB
     ],
   };
   const pitching = {
-    stats: [
-      {
-        splits: [
-          { player: { fullName: "Tarik Skubal" }, stat: { inningsPitched: "16.1", era: "1.20" } },
-          { player: { fullName: "Jack Flaherty" }, stat: { inningsPitched: "12.0", era: "7.50" } },
-          { player: { fullName: "Mop Up" }, stat: { inningsPitched: "2.0", era: "0.00" } }, // too few IP
-        ],
-      },
+    roster: [
+      rosterEntry(10, "Tarik Skubal", { inningsPitched: "16.1", era: "1.20" }),
+      rosterEntry(11, "Jack Flaherty", { inningsPitched: "12.0", era: "7.50" }),
+      rosterEntry(12, "Mop Up", { inningsPitched: "2.0", era: "0.00" }), // too few IP
     ],
   };
 

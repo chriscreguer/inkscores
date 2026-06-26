@@ -40,16 +40,20 @@ export function scheduleUrl(start: Date, end: Date): string {
   return `${STATS_BASE}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}`;
 }
 
-export function dateRangeStatsUrl(
+// The flat /stats?stats=byDateRange&teamId= endpoint silently caps at ~3 players,
+// so it can't see the whole roster. Hydrating each rostered player's byDateRange
+// split off the roster endpoint returns everyone in a single call.
+export function rosterFormUrl(
   group: "hitting" | "pitching",
   teamId: number,
   start: Date,
   end: Date,
   season: number,
 ): string {
+  const stats = `stats(type=byDateRange,startDate=${ymd(start)},endDate=${ymd(end)},group=${group})`;
   return (
-    `${STATS_BASE}/stats?stats=byDateRange&group=${group}` +
-    `&startDate=${ymd(start)}&endDate=${ymd(end)}&sportId=1&teamId=${teamId}&season=${season}`
+    `${STATS_BASE}/teams/${teamId}/roster?rosterType=active&season=${season}` +
+    `&hydrate=person(${stats})`
   );
 }
 
@@ -356,31 +360,45 @@ function inningsToNumber(ip: Any): number {
   return Number(whole || 0) + (frac ? Number(frac) / 3 : 0);
 }
 
-export function parseHitterForms(raw: Any): PlayerForm[] {
-  const out: PlayerForm[] = [];
-  for (const sp of raw?.stats?.[0]?.splits ?? []) {
-    if (num(sp?.stat?.atBats) < MIN_HITTER_AB) continue;
-    out.push({
-      name: String(sp?.player?.fullName ?? ""),
-      isPitcher: false,
-      score: (num(sp?.stat?.ops) - HITTER_OPS_MEAN) / HITTER_OPS_STD,
-    });
+/** One stat line per rostered player from a roster-hydrate response (deduped). */
+function rosterStatEntries(raw: Any): { name: string; stat: Any }[] {
+  const seen = new Set<number>();
+  const out: { name: string; stat: Any }[] = [];
+  for (const p of raw?.roster ?? []) {
+    const person = p?.person ?? {};
+    const id = person?.id;
+    if (id == null || seen.has(id)) continue;
+    for (const grp of person?.stats ?? []) {
+      const stat = grp?.splits?.[0]?.stat;
+      if (stat) {
+        seen.add(id);
+        out.push({ name: String(person.fullName ?? ""), stat });
+        break;
+      }
+    }
   }
   return out;
 }
 
+export function parseHitterForms(raw: Any): PlayerForm[] {
+  return rosterStatEntries(raw)
+    .filter((e) => num(e.stat.atBats) >= MIN_HITTER_AB)
+    .map((e) => ({
+      name: e.name,
+      isPitcher: false,
+      score: (num(e.stat.ops) - HITTER_OPS_MEAN) / HITTER_OPS_STD,
+    }));
+}
+
 export function parsePitcherForms(raw: Any): PlayerForm[] {
-  const out: PlayerForm[] = [];
-  for (const sp of raw?.stats?.[0]?.splits ?? []) {
-    if (inningsToNumber(sp?.stat?.inningsPitched) < MIN_PITCHER_IP) continue;
-    out.push({
-      name: String(sp?.player?.fullName ?? ""),
+  return rosterStatEntries(raw)
+    .filter((e) => inningsToNumber(e.stat.inningsPitched) >= MIN_PITCHER_IP)
+    .map((e) => ({
+      name: e.name,
       isPitcher: true,
       // Lower ERA is hotter, so invert the deviation.
-      score: (PITCHER_ERA_MEAN - num(sp?.stat?.era)) / PITCHER_ERA_STD,
-    });
-  }
-  return out;
+      score: (PITCHER_ERA_MEAN - num(e.stat.era)) / PITCHER_ERA_STD,
+    }));
 }
 
 /** Top 3 most-above-average for hot, bottom 3 most-below for cold. */
@@ -548,8 +566,8 @@ export function createMlbStatsAdapter(deps?: MlbStatsDeps): MlbStatsAdapter {
         const pitStart = new Date(end.getTime() - PITCHER_WINDOW_DAYS * day);
         const yr = season();
         const [hitRaw, pitRaw] = await Promise.all([
-          fetchJson(dateRangeStatsUrl("hitting", teamId, hitStart, end, yr)).catch(() => null),
-          fetchJson(dateRangeStatsUrl("pitching", teamId, pitStart, end, yr)).catch(() => null),
+          fetchJson(rosterFormUrl("hitting", teamId, hitStart, end, yr)).catch(() => null),
+          fetchJson(rosterFormUrl("pitching", teamId, pitStart, end, yr)).catch(() => null),
         ]);
         const forms = [...parseHitterForms(hitRaw), ...parsePitcherForms(pitRaw)];
         const { hot, cold } = rankPlayerForms(forms);
