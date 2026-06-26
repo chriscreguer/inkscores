@@ -20,7 +20,7 @@ String imageUrl(bool portraitMode) {
   String url = DASHBOARD_IMAGE_URL;
   if (!portraitMode) return url;
   url += url.indexOf('?') >= 0 ? "&" : "?";
-  url += "device=e1002p&view=portrait";
+  url += "device=e1002p&view=portrait-live";
   return url;
 }
 

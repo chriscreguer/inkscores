@@ -1240,11 +1240,46 @@ function drawPortraitPlayerList(ctx, s, x, y, w, kind) {
   return Math.max(28, 8 + lines.length * 20);
 }
 
+function drawPortraitLiveScorebug(ctx, s, x, y) {
+  const L = s.live || {};
+  const opponent = String(L.opponent || "").toUpperCase();
+  const scoreParts = String(L.score == null ? "—" : L.score).split("-");
+  const usScore = (scoreParts[0] || "—").trim();
+  const opponentScore = (scoreParts[1] || "—").trim();
+  const watchedAway = L.homeAway === "away";
+  const leftScore = watchedAway ? usScore : opponentScore;
+  const rightScore = watchedAway ? opponentScore : usScore;
+  const leftTeam = watchedAway;
+  const logoSize = 60;
+  const scoreSize = 34;
+  const gap = 9;
+  const score = leftScore + " - " + rightScore;
+  ctx.font = "800 " + scoreSize + "px " + fam();
+  const scoreW = Math.ceil(ctx.measureText(score).width);
+  const sx = x;
+  const sy = y + 2;
+
+  if (leftTeam) drawTeamLogoMark(ctx, s, sx, sy, logoSize);
+  else drawOpponentMark(ctx, opponent, sx, sy, logoSize);
+  ctx.fillStyle = INK.black; ctx.textBaseline = "middle";
+  ctx.fillText(score, sx + logoSize + gap, sy + logoSize / 2 + 1);
+  ctx.textBaseline = "top";
+  const rightX = sx + logoSize + gap + scoreW + gap;
+  if (leftTeam) drawOpponentMark(ctx, opponent, rightX, sy, logoSize);
+  else drawTeamLogoMark(ctx, s, rightX, sy, logoSize);
+
+  txt(ctx, "LIVE", rightX + logoSize + 16, y + 12, 15, "700", INK.red);
+  const detail = String(L.detail || "").trim();
+  const outs = Number(L.outs);
+  const outsText = Number.isFinite(outs) ? String(outs) + " out" + (outs === 1 ? "" : "s") : "";
+  txt(ctx, [detail, outsText].filter(Boolean).join(", "), rightX + logoSize + 16, y + 31, 15, "400", INK.black);
+}
+
 function drawPortraitCard(ctx, s, x, y, w) {
   let cy;
   if (s.status === "live" && s.live) {
-    drawLive(ctx, s, x, y);
-    cy = y + 100;
+    drawPortraitLiveScorebug(ctx, s, x, y);
+    cy = y + 88;
   } else {
     const end = drawScorebug(ctx, s, x, y, {
       logoSize: 60,
