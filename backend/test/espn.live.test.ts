@@ -17,8 +17,8 @@ describe("topPlayersFromCompetition", () => {
     const comp = fixture("mlb-scoreboard.json").events[0].competitions[0];
     const lines = topPlayersFromCompetition(comp, "TOR");
     expect(lines.length).toBeGreaterThan(0);
-    // shortName + first two stat clauses, no third clause ("R", "2 BB" dropped).
-    expect(lines[0]).toBe("K. Okamoto 3-4, 3 RBI");
+    // last name (initial dropped) + first two stat clauses, no third clause.
+    expect(lines[0]).toBe("Okamoto 3-4, 3 RBI");
     expect(lines[0]).not.toContain("BB");
     // no duplicate athletes
     expect(new Set(lines).size).toBe(lines.length);
@@ -69,7 +69,7 @@ describe("liveDetailsFromScoreboard", () => {
     expect(d.live?.opponent).toBe("MIN");
     expect(d.live?.onThird).toBe(true);
     expect(d.live?.outs).toBe(2);
-    expect(d.topPlayers).toEqual(["R. Greene 2-3, HR"]);
+    expect(d.topPlayers).toEqual(["Greene 2-3, HR"]);
   });
 
   it("returns empty when the team has no in-progress game", () => {

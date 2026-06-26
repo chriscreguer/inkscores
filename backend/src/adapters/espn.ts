@@ -183,9 +183,11 @@ export function topPlayersFromCompetition(comp: Any, teamAbbr: string, max = 4):
     if (!name || !display) continue;
     if (seen.has(name)) continue;
     seen.add(name);
+    // ESPN shortName is "F. Lastname"; drop the leading initial for the card.
+    const last = String(name).replace(/^[A-Za-z]\.\s+/, "");
     // "3-4, 3 RBI, R, 2 BB" -> "3-4, 3 RBI" so several players fit one row.
     const brief = String(display).split(", ").slice(0, 2).join(", ");
-    lines.push(`${name} ${brief}`);
+    lines.push(`${last} ${brief}`);
     if (lines.length >= max) break;
   }
   return lines;

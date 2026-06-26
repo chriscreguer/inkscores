@@ -753,12 +753,15 @@ function drawBases(ctx, x, y, size, b1, b2, b3, color) {
   base(-bo, 0, b3);   // 3rd (left)
 }
 
-function drawOuts(ctx, x, y, outs, color) {
+function drawOuts(ctx, x, y, outs, color, r) {
+  r = r || 3.5;                  // outer radius; default matches the landscape dots
+  const inner = r - 1.5;         // paper centre for empty outs
+  const step = r * 2 + 4;        // spacing keeps a constant 4px gap between dots
   for (let i = 0; i < 3; i++) {
-    const ox = x + i*11;
-    ctx.beginPath(); ctx.arc(ox, y, 3.5, 0, 7); ctx.fillStyle = color; ctx.fill();   // full-size ink
+    const ox = x + i*step;
+    ctx.beginPath(); ctx.arc(ox, y, r, 0, 7); ctx.fillStyle = color; ctx.fill();   // full-size ink
     // Empty out: paper centre, so the border sits inside (same outer size as filled).
-    if (i >= (outs||0)) { ctx.beginPath(); ctx.arc(ox, y, 2, 0, 7); ctx.fillStyle = INK.paper; ctx.fill(); }
+    if (i >= (outs||0)) { ctx.beginPath(); ctx.arc(ox, y, inner, 0, 7); ctx.fillStyle = INK.paper; ctx.fill(); }
   }
 }
 
@@ -1269,8 +1272,36 @@ function drawPortraitLiveScorebug(ctx, s, x, y) {
   else drawTeamLogoMark(ctx, s, rightX, sy, logoSize);
 
   const basesSize = 48;
+  const basesY = y + 9;
   const basesX = Math.min(x + 332, rightX + logoSize + 21);
-  drawBases(ctx, basesX, y + 9, basesSize, L.onFirst, L.onSecond, L.onThird, INK.black);
+  drawBases(ctx, basesX, basesY, basesSize, L.onFirst, L.onSecond, L.onThird, INK.black);
+
+  // Inning + outs form one block, vertically centred against the bases diamond.
+  const basesCenterY = basesY + basesSize / 2 + basesSize * 0.06;
+  const inningSize = 15;
+  const outsGap = 6;            // tight gap between the inning line and the outs dots
+  const outsR = 4.5;
+  const blockH = inningSize + outsGap + outsR * 2;
+  // Nudge up a touch: text sits low within its line box, so the geometric centre
+  // reads slightly below the bases. -4 optically aligns the pair with the diamond.
+  const inningY = Math.round(basesCenterY - blockH / 2) - 4;
+  const outsY = inningY + inningSize + outsGap + outsR;
+
+  const detail = String(L.detail == null ? "" : L.detail).trim();
+  const m = detail.match(/^(top|bottom|bot)\s+(.*)$/i);
+  const stateX = basesX + basesSize + 13;
+  // Left-align the inning row with the outs: the first out dot is centred on
+  // stateX, so its left edge sits one radius further left.
+  let inningX = Math.round(stateX - outsR);
+  let inning = detail || "Live";
+  if (m) {
+    drawCaret(ctx, inningX, inningY + 5, m[1].toLowerCase()[0] === "t", INK.black);
+    inningX += 13;
+    inning = m[2];
+  }
+  txt(ctx, inning, inningX, inningY, inningSize, "700", INK.black);
+  const outs = Number(L.outs);
+  drawOuts(ctx, stateX, outsY, Number.isFinite(outs) ? outs : 0, INK.black, outsR);
 }
 
 function drawPortraitWinProbabilityBar(ctx, s, x, y, w, probability) {
@@ -1282,7 +1313,7 @@ function drawPortraitWinProbabilityBar(ctx, s, x, y, w, probability) {
   ctx.font = "600 14px " + fam();
   const labelW = Math.ceil(ctx.measureText(label).width);
   const barX = x + labelW + 10;
-  const barY = y + 9;
+  const barY = y + 5;          // sits a touch high so the bar centres on the label text
   const barW = Math.max(54, w - labelW - 10);
   const fillW = Math.round(barW * clamped / 100);
 
@@ -1300,16 +1331,16 @@ function drawPortraitLiveDetails(ctx, s, x, y, w) {
   drawPortraitWinProbabilityBar(ctx, s, x, y, w, L.winProbability);
 
   const stats = (L.topPlayers || s.topPlayers || []).map((v) => String(v)).filter(Boolean);
-  let cy = y + 27;
+  let cy = y + 37;
   if (stats.length) {
     const font = "400 16px " + fam();
     for (const line of layoutStatLines(ctx, stats, w, font, 2)) {
       txt(ctx, line, x, cy, 16, "400", INK.black);
       cy += 19;
     }
-    cy += 4;
+    cy += 12;
   }
-  return Math.max(cy, y + 27);
+  return Math.max(cy, y + 37);
 }
 
 function drawPortraitCard(ctx, s, x, y, w) {
@@ -1343,7 +1374,7 @@ function drawPortraitCard(ctx, s, x, y, w) {
   cy += hotH;
   const coldH = drawPortraitPlayerList(ctx, s, x, cy, w, "cold");
   cy += coldH;
-  if (s.next != null) {
+  if (s.next != null && s.status !== "live") {
     if (hotH || coldH) cy += 16;
     const p = nextGameParts(String(s.next));
     const timeX = x + 22;

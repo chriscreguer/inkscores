@@ -118,11 +118,11 @@ export function createApp(options: AppOptions = {}): Express {
     res.json(dashboard);
   });
 
-  app.get("/api/dashboard.4bpp", async (req: Request, res: Response) => {
+  const sendDashboardImage = async (req: Request, res: Response) => {
     const query = req.query as DashboardQuery;
     const device: PreviewImageDevice =
       req.query.device === "e1002p" ? "e1002p" : "e1002";
-    const { dashboard, cacheControlSeconds } = await resolveDashboardResponse({
+    const { dashboard } = await resolveDashboardResponse({
       query,
       adapters,
       featured,
@@ -142,7 +142,9 @@ export function createApp(options: AppOptions = {}): Express {
       "X-Refresh-After-Seconds": String(dashboard.refreshAfterSeconds),
     });
     res.send(image);
-  });
+  };
+  app.get("/api/dashboard.4bpp", sendDashboardImage);
+  app.get("/api/dashboard-portrait.4bpp", sendDashboardImage);
 
   return app;
 }
