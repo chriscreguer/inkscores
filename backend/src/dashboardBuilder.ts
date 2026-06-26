@@ -192,6 +192,7 @@ export function buildDashboard(input: BuildInput): Dashboard {
     hasLiveGame,
     hasGameToday,
     hasActiveSeason: active.length > 0,
+    now: input.now,
   });
 
   return {

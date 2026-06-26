@@ -104,19 +104,45 @@ describe("isTeamActive", () => {
 });
 
 describe("getRefreshAfterSeconds", () => {
-  it("live game -> 900s", () => {
-    expect(getRefreshAfterSeconds({ hasLiveGame: true })).toBe(900);
+  // June is CDT (UTC-5), so these UTC instants map to the noted CT wall times.
+  it("live game -> 10 min", () => {
+    expect(getRefreshAfterSeconds({ hasLiveGame: true })).toBe(600);
   });
 
-  it("game today -> 1800s", () => {
-    expect(getRefreshAfterSeconds({ hasGameToday: true })).toBe(1800);
+  it("awaiting a final's editorial -> 30 min", () => {
+    expect(getRefreshAfterSeconds({ awaitingEditorial: true })).toBe(1800);
   });
 
-  it("active season -> 7200s", () => {
-    expect(getRefreshAfterSeconds({ hasActiveSeason: true })).toBe(7200);
+  it("offseason -> 6 hr", () => {
+    expect(getRefreshAfterSeconds({ hasActiveSeason: false })).toBe(21600);
   });
 
-  it("offseason default -> 21600s", () => {
-    expect(getRefreshAfterSeconds({})).toBe(21600);
+  it("during active hours -> top of the next hour", () => {
+    // 14:30 CT -> next wake 15:00 CT = 30 min.
+    const now = new Date("2026-06-25T19:30:00Z");
+    expect(getRefreshAfterSeconds({ hasActiveSeason: true, now })).toBe(1800);
+  });
+
+  it("overnight quiet -> sleeps to the 9 AM morning wake", () => {
+    // 02:00 CT -> 09:00 CT = 7 hr.
+    const now = new Date("2026-06-25T07:00:00Z");
+    expect(getRefreshAfterSeconds({ hasActiveSeason: true, now })).toBe(7 * 3600);
+  });
+
+  it("after the last active wake -> sleeps to next morning", () => {
+    // 23:30 CT -> 09:00 CT next day = 9.5 hr.
+    const now = new Date("2026-06-26T04:30:00Z");
+    expect(getRefreshAfterSeconds({ hasActiveSeason: true, now })).toBe(9.5 * 3600);
+  });
+
+  it("after the morning wake, before the active window -> sleeps to 1 PM", () => {
+    // 10:00 CT -> 13:00 CT = 3 hr.
+    const now = new Date("2026-06-25T15:00:00Z");
+    expect(getRefreshAfterSeconds({ hasActiveSeason: true, now })).toBe(3 * 3600);
+  });
+
+  it("live overrides the schedule even at quiet hours", () => {
+    const now = new Date("2026-06-25T07:00:00Z");
+    expect(getRefreshAfterSeconds({ hasLiveGame: true, hasActiveSeason: true, now })).toBe(600);
   });
 });

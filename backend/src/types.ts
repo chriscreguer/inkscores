@@ -231,6 +231,10 @@ export interface RefreshContext {
   hasLiveGame?: boolean;
   hasGameToday?: boolean;
   hasActiveSeason?: boolean;
+  /** Current time, used to schedule the next wake on the wall clock. */
+  now?: Date;
+  /** A watched game is final but its editorial summary isn't ready yet. */
+  awaitingEditorial?: boolean;
 }
 
 /** Adapter contract every sport adapter implements. */

@@ -64,6 +64,16 @@ export interface EditorialDeps {
 
 export interface EditorialClient {
   generate(teamKey: string, ctx: EditorialContext): Promise<Editorial>;
+  /**
+   * Non-blocking accessor: return the cached editorial immediately if present,
+   * otherwise kick off generation in the background and return an empty result
+   * with `pending: true`. Lets the dashboard respond without waiting on OpenAI;
+   * the next refresh picks up the cached result.
+   */
+  getOrQueue(
+    teamKey: string,
+    ctx: EditorialContext,
+  ): { editorial: Editorial; pending: boolean };
 }
 
 /** In-memory store (default). */
@@ -264,5 +274,22 @@ export function createEditorialClient(deps: EditorialDeps = {}): EditorialClient
     }
   }
 
-  return { generate };
+  function getOrQueue(
+    teamKey: string,
+    ctx: EditorialContext,
+  ): { editorial: Editorial; pending: boolean } {
+    if (!apiKey) return { editorial: {}, pending: false };
+    const finalKey = ctx.lastFinalKey ?? "none";
+    const fullKey = `editorial:game:${teamKey}:${finalKey}`;
+    const cached = store.get<Editorial>(fullKey);
+    if (cached && typeof cached === "object") {
+      return { editorial: cached, pending: false };
+    }
+    // Not cached yet: generate in the background (deduped via inFlight, and the
+    // attempt is cached even when empty, so this resolves after one pull).
+    void generate(teamKey, ctx).catch(() => {});
+    return { editorial: {}, pending: true };
+  }
+
+  return { generate, getOrQueue };
 }

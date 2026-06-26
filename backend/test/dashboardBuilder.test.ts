@@ -122,9 +122,10 @@ describe("buildDashboard - MLB in June", () => {
     expect(al.accent).toBe("blue");
   });
 
-  it("uses a 2-hour active-season refresh when no live game", () => {
+  it("schedules the next wake on the daily schedule when no live game", () => {
+    // JUNE is 08:05 CT -> next scheduled wake is the 09:00 morning wake (55 min).
     const d = buildDashboard(input);
-    expect(d.refreshAfterSeconds).toBe(7200);
+    expect(d.refreshAfterSeconds).toBe(3300);
   });
 });
 
@@ -156,13 +157,13 @@ describe("buildDashboard - season hiding", () => {
 });
 
 describe("buildDashboard - refresh + live", () => {
-  it("uses a 15-minute refresh when any active team is live", () => {
+  it("uses a 10-minute refresh when any active team is live", () => {
     const d = buildDashboard({
       now: JUNE,
       teamData: [{ team: getTeamByKey("tigers")!, summary: summary("tigers", { isLive: true }) }],
       standings: new Map([[standingsKey("mlb", "AL Central"), alCentral()]]),
     });
-    expect(d.refreshAfterSeconds).toBe(900);
+    expect(d.refreshAfterSeconds).toBe(600);
     const tigers = cards(d)[0]!;
     expect(tigers.status).toBe("live");
   });

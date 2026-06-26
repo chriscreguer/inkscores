@@ -1,4 +1,5 @@
 import { buildDashboard, standingsKey, type TeamData } from "./dashboardBuilder.js";
+import { getRefreshAfterSeconds } from "./activeSeasons.js";
 import { WATCHED_TEAMS, DEFAULT_TIMEZONE } from "./config.js";
 import { TtlCache } from "./cache.js";
 import { createMlbAdapter } from "./adapters/mlb.js";
@@ -164,23 +165,26 @@ async function assembleFeaturedDashboard(
     accent = accent ?? data.team.accent;
   }
 
-  // Editorial (recap + hot/cold) per team — best-effort and individually
-  // cached. Skipped for a team with a game in progress: the live card replaces
-  // the recap, so generating one would be both unused and a wasted LLM call.
+  // Editorial (recap + hot/cold) per team — non-blocking. Serve the cached
+  // result if present; otherwise leave the card to show its stat-line fallback
+  // and generate in the background, so a slow OpenAI call never delays (or times
+  // out) the device fetch. Skipped for a live game: the live card replaces the
+  // recap. `awaitingEditorial` shortens the next refresh so the recap lands soon.
+  let awaitingEditorial = false;
   if (options.editorial) {
     const editorial = options.editorial;
-    await Promise.allSettled(
-      teams.map(async (t) => {
-        if (t.summary?.isLive) return;
-        const lastLine = t.card.last && t.card.last !== "—" ? t.card.last : undefined;
-        const lastFinalKey = t.summary?.lastGame?.date;
-        t.editorial = await editorial.generate(t.team.key, {
-          teamName: t.team.fullName,
-          ...(lastLine ? { lastGameLine: lastLine } : {}),
-          ...(lastFinalKey ? { lastFinalKey } : {}),
-        });
-      }),
-    );
+    for (const t of teams) {
+      if (t.summary?.isLive) continue;
+      const lastLine = t.card.last && t.card.last !== "—" ? t.card.last : undefined;
+      const lastFinalKey = t.summary?.lastGame?.date;
+      const { editorial: ed, pending } = editorial.getOrQueue(t.team.key, {
+        teamName: t.team.fullName,
+        ...(lastLine ? { lastGameLine: lastLine } : {}),
+        ...(lastFinalKey ? { lastFinalKey } : {}),
+      });
+      t.editorial = ed;
+      if (pending) awaitingEditorial = true;
+    }
   }
 
   // Real make-playoffs odds (B-Ref) for the playoff column; best-effort, so a
@@ -200,12 +204,22 @@ async function assembleFeaturedDashboard(
     options.mlbStats!.getRecentForm(10).catch(() => undefined),
   ]);
 
-  return assembleFeatured({
+  const featured = assembleFeatured({
     base,
     teams,
     playoffTables,
     ...(formByAbbr ? { formByAbbr } : {}),
   });
+
+  // Recompute the cadence now that we know whether a recap is still pending: a
+  // just-finished game with no editorial yet gets the short follow-up refresh.
+  featured.refreshAfterSeconds = getRefreshAfterSeconds({
+    hasLiveGame: teams.some((t) => t.summary?.isLive),
+    hasActiveSeason: true,
+    awaitingEditorial,
+    now: options.now ?? new Date(),
+  });
+  return featured;
 }
 
 /** Append wild-card + leaders sections when the view shows MLB divisions only. */
