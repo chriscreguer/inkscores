@@ -133,7 +133,7 @@ export function createApp(options: AppOptions = {}): Express {
     const image = await renderPreviewImage4bpp(dashboard, device);
     const { width, height } = previewImageDimensions(device);
     res.set({
-      "Cache-Control": `public, max-age=${cacheControlSeconds}, stale-if-error=86400`,
+      "Cache-Control": "no-store",
       "Content-Type": "application/octet-stream",
       "Content-Length": String(image.length),
       "X-InkScores-Format": "4bpp-palette-v1",
