@@ -92,6 +92,9 @@ export async function renderPreviewImage4bpp(dashboard: Dashboard): Promise<Buff
       getItem: (key: string) => {
         if (key === "inkDevice") return "e1002";
         if (key === "inkFont") return "SF Pro";
+        // Supersample 3x so small SF Pro text keeps its stems when the renderer
+        // boxes each block down to a single Spectra ink (see quantize()).
+        if (key === "inkScale") return "3";
         return null;
       },
       setItem: () => {},

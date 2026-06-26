@@ -91,6 +91,12 @@ const DEVICES = {
 };
 let deviceKey = "e1002";
 try { deviceKey = localStorage.getItem("inkDevice") || "e1002"; } catch (e) {}
+// Supersampling factor. The browser leaves this at 1 (CoreText hints small text
+// crisply on its own). The server-side renderer sets it >1 so it can rasterize
+// at high resolution and box-down to the panel grid — otherwise its softer font
+// rasterizer loses thin stems when every pixel is snapped to one of six inks.
+let RENDER_SCALE = 1;
+try { RENDER_SCALE = Math.max(1, parseInt(localStorage.getItem("inkScale") || "1", 10) || 1); } catch (e) {}
 const GAP = 12;
 const TOP_NOTE_GAP = 4;
 // These are recomputed per render by setLayout().
@@ -269,12 +275,20 @@ function txt(ctx, str, x, y, px, weight, color) {
 
 function drawLogo(ctx, name, x, y) {
   const size = LOGOS.size, data = LOGOS.logos[name];
-  const img = ctx.createImageData(size, size);
+  // Blit through a temp canvas + drawImage (not putImageData) so the logo honours
+  // the current transform — required when RENDER_SCALE > 1. At scale 1 this is
+  // pixel-identical to a direct putImageData.
+  const tmp = document.createElement("canvas"); tmp.width = size; tmp.height = size;
+  const tctx = tmp.getContext("2d");
+  const img = tctx.createImageData(size, size);
   for (let i = 0; i < data.length; i++) {
     const c = PAL[data[i]] || PAL[1]; const o = i*4;
     img.data[o]=c[0]; img.data[o+1]=c[1]; img.data[o+2]=c[2]; img.data[o+3]=255;
   }
-  ctx.putImageData(img, x, y);
+  tctx.putImageData(img, 0, 0);
+  ctx.save(); ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(tmp, x, y, size, size);
+  ctx.restore();
 }
 
 function drawOpponentMark(ctx, abbr, x, y, size) {
@@ -1042,26 +1056,66 @@ function drawMessage(ctx, s, x, y, w) {
   txt(ctx, s.body, x + 12, y + 42, 15, "400", INK.black);
 }
 
-// Snap every pixel to the nearest ink — this is what removes anti-aliasing.
-function quantize(ctx, w, h) {
-  const img = ctx.getImageData(0, 0, w || W, h || H), d = img.data;
-  for (let i = 0; i < d.length; i += 4) {
-    let best = 0, bd = 1e9;
-    for (let p = 0; p < 6; p++) {
-      const dr = d[i]-PAL[p][0], dg = d[i+1]-PAL[p][1], db = d[i+2]-PAL[p][2];
-      const dist = dr*dr + dg*dg + db*db;
-      if (dist < bd) { bd = dist; best = p; }
-    }
-    d[i]=PAL[best][0]; d[i+1]=PAL[best][1]; d[i+2]=PAL[best][2]; d[i+3]=255;
+function nearestInk(r, g, b) {
+  let best = 0, bd = 1e9;
+  for (let p = 0; p < 6; p++) {
+    const dr = r-PAL[p][0], dg = g-PAL[p][1], db = b-PAL[p][2];
+    const dist = dr*dr + dg*dg + db*db;
+    if (dist < bd) { bd = dist; best = p; }
   }
-  ctx.putImageData(img, 0, 0);
+  return best;
+}
+
+// Snap every pixel to the nearest ink — this is what removes anti-aliasing.
+// When RENDER_SCALE > 1 the canvas was drawn at high resolution; box each
+// SCALE x SCALE block down to one panel pixel by snapping every sub-pixel to an
+// ink and taking the dominant non-paper ink (above a coverage floor). That keeps
+// thin coloured strokes solid and the right colour instead of dropping out.
+function quantize(ctx, w, h) {
+  const lw = w || W, lh = h || H;
+  const S = RENDER_SCALE;
+  if (S === 1) {
+    const img = ctx.getImageData(0, 0, lw, lh), d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const p = PAL[nearestInk(d[i], d[i+1], d[i+2])];
+      d[i]=p[0]; d[i+1]=p[1]; d[i+2]=p[2]; d[i+3]=255;
+    }
+    ctx.putImageData(img, 0, 0);
+    return;
+  }
+  const dw = lw * S, dh = lh * S;
+  const src = ctx.getImageData(0, 0, dw, dh).data;
+  const out = ctx.createImageData(lw, lh), od = out.data;
+  const need = Math.ceil(S * S * 0.33); // sub-pixel coverage to keep a stroke
+  const cnt = new Int32Array(6);
+  for (let y = 0; y < lh; y++) {
+    for (let x = 0; x < lw; x++) {
+      cnt.fill(0);
+      for (let dy = 0; dy < S; dy++) {
+        const row = ((y * S + dy) * dw + x * S) * 4;
+        for (let dx = 0; dx < S; dx++) {
+          const i = row + dx * 4;
+          cnt[nearestInk(src[i], src[i+1], src[i+2])]++;
+        }
+      }
+      let best = -1, bc = 0;
+      for (let k = 0; k < 6; k++) { if (k === 1) continue; if (cnt[k] > bc) { bc = cnt[k]; best = k; } }
+      const idx = (best >= 0 && bc >= need) ? best : 1; // 1 = paper
+      const p = PAL[idx], o = (y * lw + x) * 4;
+      od[o]=p[0]; od[o+1]=p[1]; od[o+2]=p[2]; od[o+3]=255;
+    }
+  }
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.canvas.width = lw; ctx.canvas.height = lh;
+  ctx.putImageData(out, 0, 0);
 }
 
 function render() {
   setLayout();
   const cv = document.getElementById("screen");
-  cv.width = W; cv.height = H;
+  cv.width = W * RENDER_SCALE; cv.height = H * RENDER_SCALE;
   const ctx = cv.getContext("2d");
+  if (RENDER_SCALE !== 1) ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
   ctx.fillStyle = INK.paper; ctx.fillRect(0, 0, W, H);
   if (!lastDash) { quantize(ctx); return; }
 
