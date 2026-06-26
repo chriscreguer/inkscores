@@ -542,7 +542,8 @@ function drawScorebugSummaryCard(ctx, s, x, y, variant) {
 
   if (s.next != null && topNext) {
     const startX = x + COL_W - 12 - calendarTextWidth(ctx, String(s.next), 13);
-    const nextY = y + 25;
+    const scorebugCenterY = y + 10 + (LOGOS.size || 44) / 2;
+    const nextY = Math.round(scorebugCenterY - calendarTextHeight(String(s.next), 13) / 2);
     drawCalendarText(ctx, String(s.next), startX, nextY, 13);
   } else if (s.next != null) {
     const nextY = Math.min(sy + 10, y + h - 34);
@@ -899,11 +900,19 @@ function calendarTextWidth(ctx, text, size, weight = "400") {
   return 20 + Math.ceil(Math.max(whenW, matchupW));
 }
 
+function calendarTextHeight(text, size) {
+  const p = nextGameParts(text);
+  if (!p.matchup) return size;
+  return Math.ceil(size * 1.08) + Math.max(10, size - 2);
+}
+
 function drawCalendarText(ctx, text, x, textY, size, weight = "400", color = INK.black) {
   const p = nextGameParts(text);
   const detailSize = Math.max(10, size - 2);
   const lineH = Math.ceil(size * 1.08);
-  drawCalendar(ctx, x, textY - 2, color);
+  const blockH = calendarTextHeight(text, size);
+  const iconY = textY + Math.round((blockH - 14) / 2);
+  drawCalendar(ctx, x, iconY, color);
   txt(ctx, p.when, x + 20, textY, size, "600", color);
   if (p.matchup) {
     txt(ctx, p.matchup, x + 20, textY + lineH, detailSize, weight, color);
