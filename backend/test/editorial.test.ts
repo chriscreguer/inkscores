@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import {
   extractResponseText,
   cleanSummary,
-  parseHotCold,
   shortenPlayerName,
   createEditorialClient,
 } from "../src/llm/editorial.js";
@@ -57,29 +56,6 @@ describe("shortenPlayerName", () => {
   });
 });
 
-describe("parseHotCold", () => {
-  it("parses clean JSON with last names, capped at 3 each", () => {
-    expect(parseHotCold('{"hot":["Greene","Dingler","Keith","Extra"],"cold":["Baez"]}')).toEqual({
-      hot: ["Greene", "Dingler", "Keith"],
-      cold: ["Baez"],
-    });
-  });
-
-  it("applies the PCA exception and length cap to parsed names", () => {
-    expect(parseHotCold('{"hot":["Crow-Armstrong"],"cold":["Featherston"]}')).toEqual({
-      hot: ["PCA"],
-      cold: ["Featherston"],
-    });
-  });
-  it("tolerates code fences / surrounding prose", () => {
-    const text = "Sure!\n```json\n{\"hot\":[\"Mize\"],\"cold\":[]}\n```";
-    expect(parseHotCold(text)).toEqual({ hot: ["Mize"] });
-  });
-  it("returns {} for unparseable output", () => {
-    expect(parseHotCold("no json here")).toEqual({});
-  });
-});
-
 describe("createEditorialClient", () => {
   it("returns {} and makes no call when no API key is configured", async () => {
     const fetchImpl = vi.fn();
@@ -88,15 +64,11 @@ describe("createEditorialClient", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("generates recap + hot/cold from two parallel calls", async () => {
-    const fetchImpl = vi.fn(async (_url: string, init: any) => {
-      const body = JSON.parse(init.body);
-      const isHotCold = body.input.includes("hot and which players are cold");
-      const text = isHotCold
-        ? '{"hot":["Dingler","Greene"],"cold":["Baez"]}'
-        : "Bats stayed hot in a tight loss to the Yankees.";
-      return { ok: true, json: async () => responsePayload(text) } as any;
-    });
+  it("generates a recap from a single grounded call", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => responsePayload("Bats stayed hot in a tight loss to the Yankees."),
+    } as any));
     const client = createEditorialClient({ apiKey: "sk-test", fetchImpl: fetchImpl as any });
     const ed = await client.generate("tigers", {
       teamName: "Detroit Tigers",
@@ -104,13 +76,10 @@ describe("createEditorialClient", () => {
       lastFinalKey: "2026-06-24",
     });
     expect(ed.summary).toBe("Bats stayed hot in a tight loss to the Yankees.");
-    expect(ed.hot).toEqual(["Dingler", "Greene"]);
-    expect(ed.cold).toEqual(["Baez"]);
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(ed).not.toHaveProperty("hot");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
     // the recap prompt is grounded in the real final
-    const recapBody = JSON.parse(
-      (fetchImpl.mock.calls.find((c: any) => !JSON.parse(c[1].body).input.includes("cold"))![1] as any).body,
-    );
+    const recapBody = JSON.parse((fetchImpl.mock.calls[0] as any)[1].body);
     expect(recapBody.input).toContain("L 3-2 vs NYY");
     expect(recapBody.tools[0].type).toBe("web_search_preview");
   });
@@ -118,13 +87,25 @@ describe("createEditorialClient", () => {
   it("caches by last-final key so a repeat needs no new calls", async () => {
     const fetchImpl = vi.fn(async () => ({
       ok: true,
-      json: async () => responsePayload('{"hot":["X"],"cold":[]}'),
+      json: async () => responsePayload("Bullpen usage is the main story."),
     } as any));
     const client = createEditorialClient({ apiKey: "sk-test", fetchImpl: fetchImpl as any });
     const ctx = { teamName: "Detroit Tigers", lastFinalKey: "2026-06-24" };
     await client.generate("tigers", ctx);
     await client.generate("tigers", ctx);
-    expect(fetchImpl).toHaveBeenCalledTimes(2); // 2 prompts, once — second generate is cached
+    expect(fetchImpl).toHaveBeenCalledTimes(1); // second generate is cached
+  });
+
+  it("forces a fresh call, bypassing the cache, when asked", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => responsePayload("Fresh recap."),
+    } as any));
+    const client = createEditorialClient({ apiKey: "sk-test", fetchImpl: fetchImpl as any });
+    const ctx = { teamName: "Detroit Tigers", lastFinalKey: "2026-06-24" };
+    await client.generate("tigers", ctx);
+    await client.generate("tigers", ctx, { force: true });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
   it("caches empty error results so refreshes do not retry the same game", async () => {
@@ -133,16 +114,13 @@ describe("createEditorialClient", () => {
     const ctx = { teamName: "Detroit Tigers", lastFinalKey: "2026-06-24" };
     expect(await client.generate("tigers", ctx)).toEqual({});
     expect(await client.generate("tigers", ctx)).toEqual({});
-    expect(fetchImpl).toHaveBeenCalledTimes(2); // summary + hot/cold, once total
+    expect(fetchImpl).toHaveBeenCalledTimes(1); // recap attempted once, empty cached
   });
 
   it("dedupes concurrent requests for the same game", async () => {
-    const fetchImpl = vi.fn(async (_url: string, init: any) => {
+    const fetchImpl = vi.fn(async () => {
       await new Promise((resolve) => setTimeout(resolve, 5));
-      const body = JSON.parse(init.body);
-      const isHotCold = body.input.includes("hot and which players are cold");
-      const text = isHotCold ? '{"hot":["Greene"],"cold":["Baez"]}' : "Bullpen usage is the main story.";
-      return { ok: true, json: async () => responsePayload(text) } as any;
+      return { ok: true, json: async () => responsePayload("Bullpen usage is the main story.") } as any;
     });
     const client = createEditorialClient({ apiKey: "sk-test", fetchImpl: fetchImpl as any });
     const ctx = { teamName: "Detroit Tigers", lastFinalKey: "2026-06-24" };
@@ -151,6 +129,6 @@ describe("createEditorialClient", () => {
       client.generate("tigers", ctx),
     ]);
     expect(a).toEqual(b);
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });

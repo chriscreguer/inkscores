@@ -8,6 +8,10 @@ import {
   parseRecentForm,
   canonicalAbbr,
   createMlbStatsAdapter,
+  parseHitterForms,
+  parsePitcherForms,
+  rankPlayerForms,
+  formChip,
 } from "../src/adapters/mlbStats.js";
 
 function fixture(name: string): unknown {
@@ -184,5 +188,57 @@ describe("createMlbStatsAdapter", () => {
     expect(tables.map((t) => t.id)).toEqual(["al-playoff", "nl-playoff"]);
     expect(tables[0]!.accent).toBe("blue");
     expect(tables[1]!.rows.some((r) => r[1] === "CHC")).toBe(true);
+  });
+});
+
+describe("hot/cold from real stats", () => {
+  const hitting = {
+    stats: [
+      {
+        splits: [
+          { player: { fullName: "Riley Greene" }, stat: { atBats: 40, ops: "1.050" } },
+          { player: { fullName: "Spencer Torkelson" }, stat: { atBats: 38, ops: "0.480" } },
+          { player: { fullName: "Bench Guy" }, stat: { atBats: 5, ops: "1.400" } }, // too few AB
+        ],
+      },
+    ],
+  };
+  const pitching = {
+    stats: [
+      {
+        splits: [
+          { player: { fullName: "Tarik Skubal" }, stat: { inningsPitched: "16.1", era: "1.20" } },
+          { player: { fullName: "Jack Flaherty" }, stat: { inningsPitched: "12.0", era: "7.50" } },
+          { player: { fullName: "Mop Up" }, stat: { inningsPitched: "2.0", era: "0.00" } }, // too few IP
+        ],
+      },
+    ],
+  };
+
+  it("filters by playing time and scores hitters by OPS", () => {
+    const forms = parseHitterForms(hitting);
+    expect(forms.map((f) => f.name)).toEqual(["Riley Greene", "Spencer Torkelson"]); // bench dropped
+    expect(forms[0]!.score).toBeGreaterThan(0); // hot
+    expect(forms[1]!.score).toBeLessThan(0); // cold
+  });
+
+  it("scores pitchers by ERA (lower is hotter) and drops low-IP arms", () => {
+    const forms = parsePitcherForms(pitching);
+    expect(forms.map((f) => f.name)).toEqual(["Tarik Skubal", "Jack Flaherty"]);
+    expect(forms[0]!.score).toBeGreaterThan(0); // 1.20 ERA -> hot
+    expect(forms[1]!.score).toBeLessThan(0); // 7.50 ERA -> cold
+  });
+
+  it("ranks hitters and pitchers together and tags pitcher chips", () => {
+    const forms = [...parseHitterForms(hitting), ...parsePitcherForms(pitching)];
+    const { hot, cold } = rankPlayerForms(forms);
+    expect(hot.map(formChip)).toContain("Skubal(P)"); // 1.20 ERA tops the pool
+    expect(hot.map(formChip)).toContain("Greene");
+    expect(cold.map(formChip)).toContain("Flaherty(P)");
+    expect(cold.map(formChip)).toContain("Torkelson");
+  });
+
+  it("formChip uses the short-name exceptions", () => {
+    expect(formChip({ name: "Pete Crow-Armstrong", isPitcher: false, score: 1 })).toBe("PCA");
   });
 });

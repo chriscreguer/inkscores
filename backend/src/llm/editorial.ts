@@ -32,12 +32,8 @@ const NAME_EXCEPTIONS: Record<string, string> = {
 };
 
 export interface Editorial {
-  /** ≤20-word recap of the team's most recent game. */
+  /** Short recap of the team's most recent game. */
   summary?: string;
-  /** Up to 3 hot players (short names). */
-  hot?: string[];
-  /** Up to 3 cold players (short names). */
-  cold?: string[];
 }
 
 export interface EditorialContext {
@@ -146,20 +142,6 @@ function recapPrompt(ctx: EditorialContext): string {
   );
 }
 
-function hotColdPrompt(ctx: EditorialContext): string {
-  return (
-    `Over the last 10 games the ${ctx.teamName} have played, which players ` +
-    `are hot and which players are cold? Max 3 per category, only list a ` +
-    `player if they are genuinely hot or cold. For each player, use their ` +
-    `last name only — but if a player ` +
-    `has a widely-known nickname or short form that is shorter (for example ` +
-    `initials for a long hyphenated name, like "PCA" for Pete Crow-Armstrong), ` +
-    `use that. Keep every name as short as possible. ` +
-    `Reply with ONLY minified JSON of two lists, nothing else: ` +
-    `{"hot":["Name"],"cold":["Name"]}`
-  );
-}
-
 /** Pull the assistant text out of a Responses API payload. */
 export function extractResponseText(data: Any): string {
   if (typeof data?.output_text === "string") return data.output_text.trim();
@@ -188,34 +170,8 @@ export function shortenPlayerName(name: string): string {
   return trimmed.length > MAX_NAME_LEN ? trimmed.slice(0, MAX_NAME_LEN) : trimmed;
 }
 
-/** Parse the hot/cold JSON, tolerating code fences or stray prose around it. */
-export function parseHotCold(text: string): { hot?: string[]; cold?: string[] } {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) return {};
-  let obj: Any;
-  try {
-    obj = JSON.parse(match[0]);
-  } catch {
-    return {};
-  }
-  const clean = (v: Any): string[] | undefined => {
-    if (!Array.isArray(v)) return undefined;
-    const names = v
-      .map((x) => shortenPlayerName(String(x)))
-      .filter(Boolean)
-      .slice(0, 3);
-    return names.length ? names : undefined;
-  };
-  const out: { hot?: string[]; cold?: string[] } = {};
-  const hot = clean(obj.hot);
-  const cold = clean(obj.cold);
-  if (hot) out.hot = hot;
-  if (cold) out.cold = cold;
-  return out;
-}
-
 /**
- * Build the editorial client. A game's recap and hot/cold are each generated at
+ * Build the editorial client. A game's recap is generated at
  * most once (keyed by the last final) and written through the store. The whole
  * per-game attempt is cached, even when empty, so browser refreshes never keep
  * spending OpenAI calls for the same game.
@@ -277,25 +233,16 @@ export function createEditorialClient(deps: EditorialDeps = {}): EditorialClient
     if (pending) return pending;
 
     const promise = (async () => {
-      const [summary, hotCold] = await Promise.all([
-        piece<string>(
-          `editorial:summary:${teamKey}:${finalKey}`,
-          async () => cleanSummary(await ask(recapPrompt(ctx))),
-          (v) => typeof v === "string" && v.length > 0,
-          force,
-        ),
-        piece<{ hot?: string[]; cold?: string[] }>(
-          `editorial:hotcold:${teamKey}:${finalKey}`,
-          async () => parseHotCold(await ask(hotColdPrompt(ctx))),
-          (v) => Boolean(v && (v.hot || v.cold)),
-          force,
-        ),
-      ]);
-
+      // Hot/cold now comes from real stats (mlbStats.getHotCold); the LLM only
+      // writes the prose summary.
+      const summary = await piece<string>(
+        `editorial:summary:${teamKey}:${finalKey}`,
+        async () => cleanSummary(await ask(recapPrompt(ctx))),
+        (v) => typeof v === "string" && v.length > 0,
+        force,
+      );
       const editorial: Editorial = {};
       if (summary) editorial.summary = summary;
-      if (hotCold?.hot) editorial.hot = hotCold.hot;
-      if (hotCold?.cold) editorial.cold = hotCold.cold;
       store.set(fullKey, editorial);
       return editorial;
     })();

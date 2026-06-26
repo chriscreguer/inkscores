@@ -1,4 +1,5 @@
 import { TtlCache, CACHE_TTLS } from "../cache.js";
+import { shortenPlayerName } from "../llm/editorial.js";
 import type { Accent, StandingsSection } from "../types.js";
 
 /**
@@ -37,6 +38,19 @@ function ymd(date: Date): string {
 
 export function scheduleUrl(start: Date, end: Date): string {
   return `${STATS_BASE}/schedule?sportId=1&startDate=${ymd(start)}&endDate=${ymd(end)}`;
+}
+
+export function dateRangeStatsUrl(
+  group: "hitting" | "pitching",
+  teamId: number,
+  start: Date,
+  end: Date,
+  season: number,
+): string {
+  return (
+    `${STATS_BASE}/stats?stats=byDateRange&group=${group}` +
+    `&startDate=${ymd(start)}&endDate=${ymd(end)}&sportId=1&teamId=${teamId}&season=${season}`
+  );
 }
 
 /**
@@ -314,6 +328,86 @@ export function parseRecentForm(
 // Network layer
 // ---------------------------------------------------------------------------
 
+// --- Recent hot/cold form -------------------------------------------------
+// Hitters (OPS) and pitchers (ERA) are scored on a shared "standard deviations
+// from a typical player at their position" scale, so they can be ranked in one
+// pool: positive = hot, negative = cold. The league baselines are approximate
+// and only used for relative ranking, so exact values don't matter much.
+const HITTER_OPS_MEAN = 0.715;
+const HITTER_OPS_STD = 0.13;
+const PITCHER_ERA_MEAN = 4.0;
+const PITCHER_ERA_STD = 1.5;
+const MIN_HITTER_AB = 12; // enough recent at-bats to count as a regular
+const MIN_PITCHER_IP = 6; // enough recent innings to judge
+const FORM_THRESHOLD = 0.2; // distance from average before we call it hot/cold
+const NAME_SUFFIXES = new Set(["jr", "jr.", "sr", "sr.", "ii", "iii", "iv"]);
+
+export interface PlayerForm {
+  name: string;
+  isPitcher: boolean;
+  score: number;
+}
+
+/** "16.1" innings -> 16.333 (the .1/.2 are thirds of an inning). */
+function inningsToNumber(ip: Any): number {
+  const [whole, frac] = String(ip ?? "0").split(".");
+  return Number(whole || 0) + (frac ? Number(frac) / 3 : 0);
+}
+
+export function parseHitterForms(raw: Any): PlayerForm[] {
+  const out: PlayerForm[] = [];
+  for (const sp of raw?.stats?.[0]?.splits ?? []) {
+    if (num(sp?.stat?.atBats) < MIN_HITTER_AB) continue;
+    out.push({
+      name: String(sp?.player?.fullName ?? ""),
+      isPitcher: false,
+      score: (num(sp?.stat?.ops) - HITTER_OPS_MEAN) / HITTER_OPS_STD,
+    });
+  }
+  return out;
+}
+
+export function parsePitcherForms(raw: Any): PlayerForm[] {
+  const out: PlayerForm[] = [];
+  for (const sp of raw?.stats?.[0]?.splits ?? []) {
+    if (inningsToNumber(sp?.stat?.inningsPitched) < MIN_PITCHER_IP) continue;
+    out.push({
+      name: String(sp?.player?.fullName ?? ""),
+      isPitcher: true,
+      // Lower ERA is hotter, so invert the deviation.
+      score: (PITCHER_ERA_MEAN - num(sp?.stat?.era)) / PITCHER_ERA_STD,
+    });
+  }
+  return out;
+}
+
+/** Top 3 most-above-average for hot, bottom 3 most-below for cold. */
+export function rankPlayerForms(forms: PlayerForm[]): {
+  hot: PlayerForm[];
+  cold: PlayerForm[];
+} {
+  const hot = forms
+    .filter((f) => f.score >= FORM_THRESHOLD)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+  const cold = forms
+    .filter((f) => f.score <= -FORM_THRESHOLD)
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 3);
+  return { hot, cold };
+}
+
+/** Render a player as a compact chip: short last name, pitchers tagged "(P)". */
+export function formChip(form: PlayerForm): string {
+  const parts = form.name.trim().split(/\s+/);
+  let last = parts[parts.length - 1] ?? form.name;
+  if (parts.length > 1 && NAME_SUFFIXES.has(last.toLowerCase())) {
+    last = parts[parts.length - 2] ?? last;
+  }
+  const base = shortenPlayerName(last);
+  return form.isPitcher ? `${base}(P)` : base;
+}
+
 export async function fetchStatsJson(url: string, timeoutMs = 8000): Promise<Any> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -349,6 +443,16 @@ export interface MlbStatsAdapter {
   getPlayoffTables(input?: PlayoffTablesInput): Promise<StandingsSection[]>;
   /** Each team's last-5 W/L sequence, keyed by canonical abbreviation. */
   getRecentForm(maxGames?: number): Promise<Record<string, string>>;
+  /**
+   * Hottest/coldest players (hitters + pitchers) over the recent window,
+   * computed from real stats. `cacheKey` scopes the result — pass the team's
+   * last-game id so it only recomputes once per game. Best-effort: empty on
+   * failure or an unknown abbreviation.
+   */
+  getHotCold(
+    abbr: string,
+    cacheKey: string,
+  ): Promise<{ hot: string[]; cold: string[] }>;
 }
 
 /**
@@ -420,5 +524,34 @@ export function createMlbStatsAdapter(deps?: MlbStatsDeps): MlbStatsAdapter {
     return parseRecentForm(raw, abbrById, maxGames);
   }
 
-  return { getPlayoffTables, getRecentForm };
+  async function getHotCold(
+    abbr: string,
+    cacheKey: string,
+  ): Promise<{ hot: string[]; cold: string[] }> {
+    const wantAbbr = canonicalAbbr(abbr);
+    return cache.getOrLoad(
+      `mlbstats:hotcold:${wantAbbr}:${cacheKey}`,
+      ttlMs,
+      async () => {
+        const abbrById = await loadAbbrMap();
+        const entry = Object.entries(abbrById).find(
+          ([, ab]) => canonicalAbbr(ab) === wantAbbr,
+        );
+        if (!entry) return { hot: [], cold: [] };
+        const teamId = Number(entry[0]);
+        const end = now();
+        const start = new Date(end.getTime() - 14 * 24 * 60 * 60 * 1000);
+        const yr = season();
+        const [hitRaw, pitRaw] = await Promise.all([
+          fetchJson(dateRangeStatsUrl("hitting", teamId, start, end, yr)).catch(() => null),
+          fetchJson(dateRangeStatsUrl("pitching", teamId, start, end, yr)).catch(() => null),
+        ]);
+        const forms = [...parseHitterForms(hitRaw), ...parsePitcherForms(pitRaw)];
+        const { hot, cold } = rankPlayerForms(forms);
+        return { hot: hot.map(formChip), cold: cold.map(formChip) };
+      },
+    );
+  }
+
+  return { getPlayoffTables, getRecentForm, getHotCold };
 }

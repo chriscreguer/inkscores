@@ -69,7 +69,9 @@ describe("buildFeaturedCard", () => {
         sport: "mlb",
         lastGame: { date: "2026-06-24", opponent: "NYY", homeAway: "home", result: "L", score: "2-3" },
       },
-      editorial: { summary: "Bats went quiet late.", hot: ["Greene"], cold: ["Baez"] },
+      editorial: { summary: "Bats went quiet late." },
+      hot: ["Greene"],
+      cold: ["Baez"],
     });
     expect(card.cardVariant).toBe("scorebug");
     expect(card.teamAbbr).toBe("DET");

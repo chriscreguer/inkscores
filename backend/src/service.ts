@@ -167,9 +167,30 @@ async function assembleFeaturedDashboard(
     accent = accent ?? data.team.accent;
   }
 
-  // Editorial (recap + hot/cold) per team — non-blocking. Serve the cached
-  // result if present; otherwise leave the card to show its stat-line fallback
-  // and generate in the background, so a slow OpenAI call never delays (or times
+  // Hot/cold players from real stats (MLB Stats API), not the LLM — factual and
+  // deterministic, so it never hallucinates a roster or flips between refreshes.
+  // Cached per game (last-final key). Best-effort: a failure just omits it.
+  const nowDate = options.now ?? new Date();
+  await Promise.all(
+    teams.map(async (t) => {
+      if (t.summary?.isLive) return;
+      const key = t.summary?.lastGame?.date ?? nowDate.toISOString().slice(0, 10);
+      try {
+        const { hot, cold } = await options.mlbStats!.getHotCold(
+          t.team.espnTeamSlug.toUpperCase(),
+          key,
+        );
+        if (hot.length) t.hot = hot;
+        if (cold.length) t.cold = cold;
+      } catch {
+        // best-effort; the card simply omits hot/cold
+      }
+    }),
+  );
+
+  // Editorial (recap) per team — non-blocking. Serve the cached result if
+  // present; otherwise leave the card to show its stat-line fallback and
+  // generate in the background, so a slow OpenAI call never delays (or times
   // out) the device fetch. Skipped for a live game: the live card replaces the
   // recap. `awaitingEditorial` shortens the next refresh so the recap lands soon.
   let awaitingEditorial = false;

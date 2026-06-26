@@ -41,11 +41,14 @@ export interface FeaturedTeamInput {
   team: WatchedTeam;
   summary?: TeamSummary;
   editorial?: Editorial;
+  /** Hottest/coldest players from real stats (replaces any LLM hot/cold). */
+  hot?: string[];
+  cold?: string[];
 }
 
 /** Enrich a plain team card into a scorebug (or keep it live) with editorial. */
 export function buildFeaturedCard(input: FeaturedTeamInput): TeamCardSection {
-  const { card, team, summary, editorial } = input;
+  const { card, team, summary, editorial, hot, cold } = input;
   const out: TeamCardSection = { ...card, teamAbbr: abbrOf(team) };
 
   // A live game keeps the live treatment (the renderer prioritises it); the
@@ -67,8 +70,8 @@ export function buildFeaturedCard(input: FeaturedTeamInput): TeamCardSection {
   }
 
   if (editorial?.summary) out.summary = editorial.summary;
-  if (editorial?.hot && editorial.hot.length) out.hot = editorial.hot;
-  if (editorial?.cold && editorial.cold.length) out.cold = editorial.cold;
+  if (hot && hot.length) out.hot = hot;
+  if (cold && cold.length) out.cold = cold;
 
   return out;
 }
