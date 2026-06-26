@@ -5,7 +5,7 @@
 #include "fetch_dashboard.h"
 #include "render_dashboard.h"
 #include "sleep.h"
-#include "wifi.h"
+#include "network.h"
 
 // The reTerminal E1002 dashboard is a wake-render-sleep device: there is no
 // meaningful loop(). Everything happens once per wake in setup().

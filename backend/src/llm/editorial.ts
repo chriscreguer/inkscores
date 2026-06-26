@@ -21,7 +21,7 @@ const RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-4o-mini";
 
 /** Hard cap on a recap line (replaces the old ~20-word limit). */
-const MAX_SUMMARY_LEN = 116;
+const MAX_SUMMARY_LEN = 112;
 
 /** Hard cap on a displayed player name (the chips are tiny). */
 const MAX_NAME_LEN = 11;
@@ -185,15 +185,16 @@ export function parseHotCold(text: string): { hot?: string[]; cold?: string[] } 
 
 /**
  * Build the editorial client. A game's recap and hot/cold are each generated at
- * most once (keyed by the last final) and written through the store; only a
- * successful, non-empty result is cached, so a transient failure of one prompt
- * never poisons the other or locks a blank in until the next game.
+ * most once (keyed by the last final) and written through the store. The whole
+ * per-game attempt is cached, even when empty, so browser refreshes never keep
+ * spending OpenAI calls for the same game.
  */
 export function createEditorialClient(deps: EditorialDeps = {}): EditorialClient {
   const apiKey = deps.apiKey ?? process.env.OPENAI_API_KEY;
   const model = deps.model ?? process.env.OPENAI_MODEL ?? DEFAULT_MODEL;
   const store = deps.store ?? memoryStore();
   const fetchImpl = deps.fetchImpl ?? fetch;
+  const inFlight = new Map<string, Promise<Editorial>>();
 
   async function ask(prompt: string): Promise<string> {
     const res = await fetchImpl(RESPONSES_URL, {
@@ -227,24 +228,41 @@ export function createEditorialClient(deps: EditorialDeps = {}): EditorialClient
   async function generate(teamKey: string, ctx: EditorialContext): Promise<Editorial> {
     if (!apiKey) return {};
     const finalKey = ctx.lastFinalKey ?? "none";
-    const [summary, hotCold] = await Promise.all([
-      piece<string>(
-        `editorial:summary:${teamKey}:${finalKey}`,
-        async () => cleanSummary(await ask(recapPrompt(ctx))),
-        (v) => typeof v === "string" && v.length > 0,
-      ),
-      piece<{ hot?: string[]; cold?: string[] }>(
-        `editorial:hotcold:${teamKey}:${finalKey}`,
-        async () => parseHotCold(await ask(hotColdPrompt(ctx))),
-        (v) => Boolean(v && (v.hot || v.cold)),
-      ),
-    ]);
+    const fullKey = `editorial:game:${teamKey}:${finalKey}`;
+    const cached = store.get<Editorial>(fullKey);
+    if (cached && typeof cached === "object") return cached;
 
-    const editorial: Editorial = {};
-    if (summary) editorial.summary = summary;
-    if (hotCold?.hot) editorial.hot = hotCold.hot;
-    if (hotCold?.cold) editorial.cold = hotCold.cold;
-    return editorial;
+    const pending = inFlight.get(fullKey);
+    if (pending) return pending;
+
+    const promise = (async () => {
+      const [summary, hotCold] = await Promise.all([
+        piece<string>(
+          `editorial:summary:${teamKey}:${finalKey}`,
+          async () => cleanSummary(await ask(recapPrompt(ctx))),
+          (v) => typeof v === "string" && v.length > 0,
+        ),
+        piece<{ hot?: string[]; cold?: string[] }>(
+          `editorial:hotcold:${teamKey}:${finalKey}`,
+          async () => parseHotCold(await ask(hotColdPrompt(ctx))),
+          (v) => Boolean(v && (v.hot || v.cold)),
+        ),
+      ]);
+
+      const editorial: Editorial = {};
+      if (summary) editorial.summary = summary;
+      if (hotCold?.hot) editorial.hot = hotCold.hot;
+      if (hotCold?.cold) editorial.cold = hotCold.cold;
+      store.set(fullKey, editorial);
+      return editorial;
+    })();
+
+    inFlight.set(fullKey, promise);
+    try {
+      return await promise;
+    } finally {
+      inFlight.delete(fullKey);
+    }
   }
 
   return { generate };

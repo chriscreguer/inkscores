@@ -230,8 +230,7 @@ void drawCalendarIcon(int x, int y, uint16_t color) {
 void renderNextGame(const String& next, int x, int y, uint16_t color) {
   const NextGameParts parts = splitNextGame(next);
   const int textH = measureText(parts.when, 2).h;
-  const int blockH = parts.matchup.length() > 0 ? 20 + textH : textH;
-  const int iconY = y + max(0, (blockH - 14) / 2);
+  const int iconY = y + max(0, (textH - 14) / 2);
   drawCalendarIcon(x, iconY, color);
   drawText(x + 20, y, fitText(parts.when, 18), 2, color);
   if (parts.matchup.length() > 0) {

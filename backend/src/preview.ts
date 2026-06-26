@@ -910,8 +910,7 @@ function drawCalendarText(ctx, text, x, textY, size, weight = "400", color = INK
   const p = nextGameParts(text);
   const detailSize = Math.max(10, size - 2);
   const lineH = Math.ceil(size * 1.08);
-  const blockH = calendarTextHeight(text, size);
-  const iconY = textY + Math.round((blockH - 14) / 2);
+  const iconY = textY + Math.round((size - 14) / 2);
   drawCalendar(ctx, x, iconY, color);
   txt(ctx, p.when, x + 20, textY, size, "600", color);
   if (p.matchup) {

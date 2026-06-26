@@ -36,10 +36,10 @@ describe("cleanSummary", () => {
   it("returns undefined for empty text", () => {
     expect(cleanSummary("   ")).toBeUndefined();
   });
-  it("hard-caps at 116 characters", () => {
+  it("hard-caps at 112 characters", () => {
     const long = "a ".repeat(120).trim(); // ~239 chars
     const out = cleanSummary(long)!;
-    expect(out.length).toBeLessThanOrEqual(116);
+    expect(out.length).toBeLessThanOrEqual(112);
   });
 });
 
@@ -127,9 +127,30 @@ describe("createEditorialClient", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2); // 2 prompts, once — second generate is cached
   });
 
-  it("degrades to {} when the API errors", async () => {
+  it("caches empty error results so refreshes do not retry the same game", async () => {
     const fetchImpl = vi.fn(async () => ({ ok: false, status: 500 } as any));
     const client = createEditorialClient({ apiKey: "sk-test", fetchImpl: fetchImpl as any });
-    expect(await client.generate("tigers", { teamName: "Detroit Tigers" })).toEqual({});
+    const ctx = { teamName: "Detroit Tigers", lastFinalKey: "2026-06-24" };
+    expect(await client.generate("tigers", ctx)).toEqual({});
+    expect(await client.generate("tigers", ctx)).toEqual({});
+    expect(fetchImpl).toHaveBeenCalledTimes(2); // summary + hot/cold, once total
+  });
+
+  it("dedupes concurrent requests for the same game", async () => {
+    const fetchImpl = vi.fn(async (_url: string, init: any) => {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      const body = JSON.parse(init.body);
+      const isHotCold = body.input.includes("hot and which players are cold");
+      const text = isHotCold ? '{"hot":["Greene"],"cold":["Baez"]}' : "Bullpen usage is the main story.";
+      return { ok: true, json: async () => responsePayload(text) } as any;
+    });
+    const client = createEditorialClient({ apiKey: "sk-test", fetchImpl: fetchImpl as any });
+    const ctx = { teamName: "Detroit Tigers", lastFinalKey: "2026-06-24" };
+    const [a, b] = await Promise.all([
+      client.generate("tigers", ctx),
+      client.generate("tigers", ctx),
+    ]);
+    expect(a).toEqual(b);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 });
