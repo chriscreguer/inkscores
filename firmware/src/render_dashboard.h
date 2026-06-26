@@ -12,7 +12,7 @@ void initDisplay();
 void renderDashboard(const JsonDocument& doc, FetchStatus status);
 
 // Render a packed 4bpp preview image from `/api/dashboard.4bpp`.
-void renderPreviewImage4bpp(const uint8_t* data, size_t length);
+void renderPreviewImage4bpp(const uint8_t* data, size_t length, int width, int height);
 
 // Render a minimal error screen when no dashboard data is available at all.
 void renderError(const char* reason);

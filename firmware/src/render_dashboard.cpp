@@ -4,7 +4,12 @@
 #include <SPI.h>
 
 #include "dashboard_types.h"
+#include "config.h"
 #include "logos.h"
+
+#ifndef PORTRAIT_DISPLAY_ROTATION
+#define PORTRAIT_DISPLAY_ROTATION 1
+#endif
 
 #if __has_include("sf_pro_fonts.h")
 // Locally generated from user-installed SF Pro fonts. This file is gitignored
@@ -670,20 +675,20 @@ void renderDashboard(const JsonDocument& doc, FetchStatus status) {
   display.hibernate();
 }
 
-void renderPreviewImage4bpp(const uint8_t* data, size_t length) {
-  using namespace layout;
-  constexpr size_t kExpectedLength = kWidth * kHeight / 2;
+void renderPreviewImage4bpp(const uint8_t* data, size_t length, int width, int height) {
+  const size_t kExpectedLength = (size_t)width * (size_t)height / 2;
   if (data == nullptr || length != kExpectedLength) {
     renderError("Bad preview image");
     return;
   }
 
+  display.setRotation(width < height ? PORTRAIT_DISPLAY_ROTATION : 0);
   display.setFullWindow();
   display.firstPage();
   do {
-    for (int y = 0; y < kHeight; y++) {
-      const size_t row = (size_t)y * (kWidth / 2);
-      for (int bx = 0; bx < kWidth / 2; bx++) {
+    for (int y = 0; y < height; y++) {
+      const size_t row = (size_t)y * (width / 2);
+      for (int bx = 0; bx < width / 2; bx++) {
         const uint8_t packed = data[row + bx];
         const uint8_t left = packed >> 4;
         const uint8_t right = packed & 0x0F;

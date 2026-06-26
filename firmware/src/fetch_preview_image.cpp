@@ -11,14 +11,29 @@
 #endif
 
 namespace {
-constexpr size_t kPreviewImageBytes = 800 * 480 / 2;
+constexpr int kLandscapeWidth = 800;
+constexpr int kLandscapeHeight = 480;
+constexpr int kPortraitWidth = 480;
+constexpr int kPortraitHeight = 800;
 
-uint8_t* allocateImageBuffer() {
+String imageUrl(bool portraitMode) {
+  String url = DASHBOARD_IMAGE_URL;
+  if (!portraitMode) return url;
+  url += url.indexOf('?') >= 0 ? "&" : "?";
+  url += "device=e1002p";
+  return url;
+}
+
+size_t imageBytes(int width, int height) {
+  return (size_t)width * (size_t)height / 2;
+}
+
+uint8_t* allocateImageBuffer(size_t bytes) {
   uint8_t* data = (uint8_t*)heap_caps_malloc(
-      kPreviewImageBytes,
+      bytes,
       MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   if (data != nullptr) return data;
-  return (uint8_t*)heap_caps_malloc(kPreviewImageBytes, MALLOC_CAP_8BIT);
+  return (uint8_t*)heap_caps_malloc(bytes, MALLOC_CAP_8BIT);
 }
 
 uint32_t parseRefreshHeader(HTTPClient& http) {
@@ -32,10 +47,16 @@ uint32_t parseRefreshHeader(HTTPClient& http) {
 PreviewImageStatus fetchPreviewImage(
     uint8_t*& data,
     size_t& length,
-    uint32_t& refreshSeconds) {
+    uint32_t& refreshSeconds,
+    bool portraitMode,
+    int& width,
+    int& height) {
   data = nullptr;
   length = 0;
   refreshSeconds = DEFAULT_SLEEP_SECONDS;
+  width = portraitMode ? kPortraitWidth : kLandscapeWidth;
+  height = portraitMode ? kPortraitHeight : kLandscapeHeight;
+  const size_t expectedBytes = imageBytes(width, height);
 
   WiFiClientSecure client;
   client.setInsecure();
@@ -43,10 +64,11 @@ PreviewImageStatus fetchPreviewImage(
   HTTPClient http;
   http.setConnectTimeout(10000);
   http.setTimeout(15000);
-  const char* headerKeys[] = {"X-Refresh-After-Seconds"};
-  http.collectHeaders(headerKeys, 1);
+  const char* headerKeys[] = {"X-Refresh-After-Seconds", "X-Width", "X-Height"};
+  http.collectHeaders(headerKeys, 3);
 
-  if (!http.begin(client, DASHBOARD_IMAGE_URL)) {
+  const String url = imageUrl(portraitMode);
+  if (!http.begin(client, url)) {
     Serial0.println("image http.begin failed");
     return PreviewImageStatus::Failed;
   }
@@ -58,14 +80,22 @@ PreviewImageStatus fetchPreviewImage(
     return PreviewImageStatus::Failed;
   }
 
+  const int headerWidth = http.header("X-Width").toInt();
+  const int headerHeight = http.header("X-Height").toInt();
+  if (headerWidth > 0 && headerHeight > 0) {
+    width = headerWidth;
+    height = headerHeight;
+  }
+  const size_t imageLength = imageBytes(width, height);
+
   const int contentLength = http.getSize();
-  if (contentLength >= 0 && (size_t)contentLength != kPreviewImageBytes) {
+  if (contentLength >= 0 && (size_t)contentLength != imageLength) {
     Serial0.printf("Bad image size: %d\n", contentLength);
     http.end();
     return PreviewImageStatus::Failed;
   }
 
-  uint8_t* buffer = allocateImageBuffer();
+  uint8_t* buffer = allocateImageBuffer(imageLength);
   if (buffer == nullptr) {
     Serial0.println("Could not allocate preview image buffer");
     http.end();
@@ -75,10 +105,10 @@ PreviewImageStatus fetchPreviewImage(
   WiFiClient* stream = http.getStreamPtr();
   size_t read = 0;
   unsigned long lastDataAt = millis();
-  while (read < kPreviewImageBytes && http.connected()) {
+  while (read < imageLength && http.connected()) {
     const int available = stream->available();
     if (available > 0) {
-      const size_t want = min((size_t)available, kPreviewImageBytes - read);
+      const size_t want = min((size_t)available, imageLength - read);
       const int n = stream->readBytes(buffer + read, want);
       if (n > 0) {
         read += (size_t)n;
@@ -94,7 +124,7 @@ PreviewImageStatus fetchPreviewImage(
   refreshSeconds = parseRefreshHeader(http);
   http.end();
 
-  if (read != kPreviewImageBytes) {
+  if (read != imageLength) {
     Serial0.printf("Short image read: %u\n", (unsigned)read);
     freePreviewImage(buffer);
     return PreviewImageStatus::Failed;

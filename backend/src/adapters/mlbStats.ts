@@ -351,6 +351,8 @@ const NAME_SUFFIXES = new Set(["jr", "jr.", "sr", "sr.", "ii", "iii", "iv"]);
 export interface PlayerForm {
   name: string;
   isPitcher: boolean;
+  metric: "OPS" | "ERA";
+  value: number;
   score: number;
 }
 
@@ -383,22 +385,32 @@ function rosterStatEntries(raw: Any): { name: string; stat: Any }[] {
 export function parseHitterForms(raw: Any): PlayerForm[] {
   return rosterStatEntries(raw)
     .filter((e) => num(e.stat.atBats) >= MIN_HITTER_AB)
-    .map((e) => ({
-      name: e.name,
-      isPitcher: false,
-      score: (num(e.stat.ops) - HITTER_OPS_MEAN) / HITTER_OPS_STD,
-    }));
+    .map((e) => {
+      const ops = num(e.stat.ops);
+      return {
+        name: e.name,
+        isPitcher: false,
+        metric: "OPS",
+        value: ops,
+        score: (ops - HITTER_OPS_MEAN) / HITTER_OPS_STD,
+      };
+    });
 }
 
 export function parsePitcherForms(raw: Any): PlayerForm[] {
   return rosterStatEntries(raw)
     .filter((e) => inningsToNumber(e.stat.inningsPitched) >= MIN_PITCHER_IP)
-    .map((e) => ({
-      name: e.name,
-      isPitcher: true,
-      // Lower ERA is hotter, so invert the deviation.
-      score: (PITCHER_ERA_MEAN - num(e.stat.era)) / PITCHER_ERA_STD,
-    }));
+    .map((e) => {
+      const era = num(e.stat.era);
+      return {
+        name: e.name,
+        isPitcher: true,
+        metric: "ERA",
+        value: era,
+        // Lower ERA is hotter, so invert the deviation.
+        score: (PITCHER_ERA_MEAN - era) / PITCHER_ERA_STD,
+      };
+    });
 }
 
 /** Top 3 most-above-average for hot, bottom 3 most-below for cold. */
@@ -417,14 +429,21 @@ export function rankPlayerForms(forms: PlayerForm[]): {
   return { hot, cold };
 }
 
-/** Render a player as a compact chip: short last name only. */
+function formMetric(form: PlayerForm): string {
+  if (form.metric === "OPS") {
+    return form.value.toFixed(3).replace(/^0/, "");
+  }
+  return form.value.toFixed(2);
+}
+
+/** Render a player as a compact chip: short last name plus recent raw metric. */
 export function formChip(form: PlayerForm): string {
   const parts = form.name.trim().split(/\s+/);
   let last = parts[parts.length - 1] ?? form.name;
   if (parts.length > 1 && NAME_SUFFIXES.has(last.toLowerCase())) {
     last = parts[parts.length - 2] ?? last;
   }
-  return shortenPlayerName(last);
+  return `${shortenPlayerName(last)} (${formMetric(form)})`;
 }
 
 export async function fetchStatsJson(url: string, timeoutMs = 8000): Promise<Any> {

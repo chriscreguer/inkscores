@@ -228,13 +228,19 @@ describe("hot/cold from real stats", () => {
   it("ranks hitters and pitchers together", () => {
     const forms = [...parseHitterForms(hitting), ...parsePitcherForms(pitching)];
     const { hot, cold } = rankPlayerForms(forms);
-    expect(hot.map(formChip)).toContain("Skubal"); // 1.20 ERA tops the pool
-    expect(hot.map(formChip)).toContain("Greene");
-    expect(cold.map(formChip)).toContain("Flaherty");
-    expect(cold.map(formChip)).toContain("Torkelson");
+    expect(hot.map(formChip)).toContain("Skubal (1.20)"); // 1.20 ERA tops the pool
+    expect(hot.map(formChip)).toContain("Greene (1.050)");
+    expect(cold.map(formChip)).toContain("Flaherty (7.50)");
+    expect(cold.map(formChip)).toContain("Torkelson (.480)");
   });
 
   it("formChip uses the short-name exceptions", () => {
-    expect(formChip({ name: "Pete Crow-Armstrong", isPitcher: false, score: 1 })).toBe("PCA");
+    expect(formChip({
+      name: "Pete Crow-Armstrong",
+      isPitcher: false,
+      metric: "OPS",
+      value: 1,
+      score: 1,
+    })).toBe("PCA (1.000)");
   });
 });

@@ -12,10 +12,9 @@ import {
 } from "./service.js";
 import { PREVIEW_HTML } from "./preview.js";
 import {
-  PREVIEW_IMAGE_HEIGHT,
-  PREVIEW_IMAGE_PACKED_BYTES,
-  PREVIEW_IMAGE_WIDTH,
+  previewImageDimensions,
   renderPreviewImage4bpp,
+  type PreviewImageDevice,
 } from "./previewImage.js";
 import type { Dashboard } from "./types.js";
 import mlbMock from "./mock/dashboard.mlb.json" with { type: "json" };
@@ -121,6 +120,8 @@ export function createApp(options: AppOptions = {}): Express {
 
   app.get("/api/dashboard.4bpp", async (req: Request, res: Response) => {
     const query = req.query as DashboardQuery;
+    const device: PreviewImageDevice =
+      req.query.device === "e1002p" ? "e1002p" : "e1002";
     const { dashboard, cacheControlSeconds } = await resolveDashboardResponse({
       query,
       adapters,
@@ -129,14 +130,15 @@ export function createApp(options: AppOptions = {}): Express {
       loadMock,
     });
 
-    const image = await renderPreviewImage4bpp(dashboard);
+    const image = await renderPreviewImage4bpp(dashboard, device);
+    const { width, height } = previewImageDimensions(device);
     res.set({
       "Cache-Control": `public, max-age=${cacheControlSeconds}, stale-if-error=86400`,
       "Content-Type": "application/octet-stream",
-      "Content-Length": String(PREVIEW_IMAGE_PACKED_BYTES),
+      "Content-Length": String(image.length),
       "X-InkScores-Format": "4bpp-palette-v1",
-      "X-Width": String(PREVIEW_IMAGE_WIDTH),
-      "X-Height": String(PREVIEW_IMAGE_HEIGHT),
+      "X-Width": String(width),
+      "X-Height": String(height),
       "X-Refresh-After-Seconds": String(dashboard.refreshAfterSeconds),
     });
     res.send(image);

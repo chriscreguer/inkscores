@@ -88,6 +88,8 @@ const FONTS = {
 const DEVICES = {
   e1002: { label: "E1002 800x480", W: 800, H: 480, M: 16, CARD_H: 116, FOOT_H: 16, maxCards: 2, zoom: 1 },
   e1004: { label: "E1004 1200x1600", W: 1200, H: 1600, M: 28, CARD_H: 132, FOOT_H: 22, maxCards: 6, zoom: 0.5 },
+  // E1002 stood on its side: single (priority) team, bigger type, AL tables only.
+  e1002p: { label: "E1002 Portrait 480x800 (1 team)", W: 480, H: 800, M: 18, CARD_H: 116, FOOT_H: 16, maxCards: 1, zoom: 1 },
 };
 let deviceKey = "e1002";
 try { deviceKey = localStorage.getItem("inkDevice") || "e1002"; } catch (e) {}
@@ -503,18 +505,21 @@ function drawPlainSummaryCard(ctx, s, x, y) {
   }
 }
 
-function drawScorebug(ctx, s, x, y) {
+function drawScorebug(ctx, s, x, y, opts = {}) {
   const parsed = parseLastGame(s.last);
   const opponent = String(s.scorebugOpponent || parsed?.opponent || "").toUpperCase();
   const leftScore = parsed?.leftScore || "—";
   const rightScore = parsed?.rightScore || "—";
-  const logoSize = LOGOS.size || 44;
+  const logoSize = opts.logoSize || (LOGOS.size || 44);
+  const scoreSize = opts.scoreSize || 24;
+  const leftInset = opts.leftInset ?? 12;
+  const topInset = opts.topInset ?? 10;
   const score = leftScore + " - " + rightScore;
-  ctx.font = "800 24px " + fam();
+  ctx.font = "800 " + scoreSize + "px " + fam();
   const scoreW = Math.ceil(ctx.measureText(score).width);
   const gap = 9;
-  const sx = x + 12;
-  const sy = y + 10;
+  const sx = x + leftInset;
+  const sy = y + topInset;
 
   if (parsed?.leftSide === "team") drawTeamLogoMark(ctx, s, sx, sy, logoSize);
   else drawOpponentMark(ctx, opponent, sx, sy, logoSize);
@@ -1052,6 +1057,18 @@ function clampLines(ctx, lines, maxLines, maxW, font) {
   return head;
 }
 
+function fitTextToLines(ctx, text, maxLines, maxW, font) {
+  ctx.font = font;
+  const words = String(text == null ? "" : text).split(/\s+/).filter(Boolean);
+  let best = "";
+  for (const word of words) {
+    const next = best ? best + " " + word : word;
+    if (wrapText(ctx, next, maxW, font).length > maxLines) break;
+    best = next;
+  }
+  return wrapText(ctx, best, maxW, font).slice(0, maxLines);
+}
+
 // Truncate text with an ellipsis to fit a pixel width at the given font.
 function fitWidth(ctx, text, maxW, font) {
   ctx.font = font;
@@ -1122,6 +1139,181 @@ function quantize(ctx, w, h) {
   ctx.putImageData(out, 0, 0);
 }
 
+// Portrait standings table with larger type than the landscape version. When
+// maxRows would clip it, keep the top rows plus the highlighted (watched) row,
+// with a dashed gap between — so the Tigers' own line is never cut off.
+function drawPortraitTable(ctx, s, x, y, w, maxRows) {
+  const COLX = [0, 36, 134, 218, 284, 388];
+  const cols = s.columns || [];
+  const rowH = 27;
+  txt(ctx, s.title, x, y, 22, "700", INK.black);
+  for (let k = 2; k < cols.length && k < COLX.length; k++) {
+    txt(ctx, cols[k], x + 6 + COLX[k], y + 9, 13, "400", INK.black);
+  }
+  ctx.strokeStyle = INK.black; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x, y + 29.5); ctx.lineTo(x + w, y + 29.5); ctx.stroke();
+
+  const hot = new Set(s.highlightRows || []);
+  const acc = accentInk(s.accent);
+  const allRows = s.rows || [];
+  // Build the render list, trimming to fit while keeping the watched row.
+  let items = allRows.map((row, idx) => ({ row, idx, gapBefore: false }));
+  if (maxRows && items.length > maxRows) {
+    const lastHot = [...hot].sort((a, b) => a - b).pop();
+    const keepIdx = lastHot != null && lastHot >= maxRows - 1 ? lastHot : items.length - 1;
+    const kept = items[keepIdx];
+    items = items.slice(0, maxRows - 1);
+    items.push({ ...kept, gapBefore: true });
+  }
+
+  let ry = y + 37;
+  for (const it of items) {
+    if (it.gapBefore) {
+      ctx.strokeStyle = INK.black; ctx.lineWidth = 1; ctx.setLineDash([3, 2]);
+      ctx.beginPath(); ctx.moveTo(x, ry - 4.5); ctx.lineTo(x + w, ry - 4.5); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    const r = it.row; const on = hot.has(it.idx);
+    if (on) { ctx.fillStyle = acc; ctx.fillRect(x - 2, ry - 2, 4, rowH - 2); }
+    const color = on ? acc : INK.black;
+    for (let k = 0; k < r.length && k < COLX.length; k++) {
+      const head = String(cols[k] || "").toLowerCase();
+      if (head === "l5" || head === "l10" || head === "form") {
+        drawForm(ctx, x + 6 + COLX[k], ry + 1, r[k]);
+      } else {
+        txt(ctx, r[k] == null ? "" : r[k], x + 6 + COLX[k], ry, 19, on ? "700" : "400", color);
+      }
+    }
+    ry += rowH;
+  }
+
+  if (s.dividerAfter) {
+    const dy = y + 37 + s.dividerAfter * rowH - 4;
+    ctx.strokeStyle = INK.black; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, dy + 0.5); ctx.lineTo(x + w, dy + 0.5); ctx.stroke();
+  }
+  if (s.cutoffAfter) {
+    const cyL = y + 37 + s.cutoffAfter * rowH - 4;
+    ctx.strokeStyle = INK.black; ctx.lineWidth = 1; ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.moveTo(x, cyL + 0.5); ctx.lineTo(x + w, cyL + 0.5); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  return ry - y;
+}
+
+// Single-team card for the portrait view: scorebug first, then recap and
+// hot/cold, with the next game tucked underneath.
+function wrapPortraitPlayerItems(ctx, items, maxW, font) {
+  ctx.font = font;
+  const lines = [];
+  let line = "";
+  for (const item of items) {
+    const next = line ? line + ", " + item : item;
+    if (line && ctx.measureText(next).width > maxW) {
+      lines.push(line);
+      line = item;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  if (lines.length <= 2) return lines.map((ln) => fitWidth(ctx, ln, maxW, font));
+  return [fitWidth(ctx, lines[0], maxW, font), fitWidth(ctx, lines.slice(1).join(", "), maxW, font)];
+}
+
+function drawPortraitPlayerList(ctx, s, x, y, w, kind) {
+  const items = kind === "hot" ? (s.hot || []) : (s.cold || []);
+  if (!items.length) return 0;
+
+  const font = "400 16px " + fam();
+  const textX = x + 32;
+  const textW = w - 34;
+  const lines = wrapPortraitPlayerItems(ctx, items, textW, font);
+  if (kind === "hot") drawFlame(ctx, x + 9, y + 10, 16, INK.red);
+  else drawSnowflake(ctx, x + 9, y + 10, 16, INK.blue);
+
+  let ty = y + 3;
+  lines.forEach((ln) => {
+    txt(ctx, ln, textX, ty, 16, "400", INK.black);
+    ty += 20;
+  });
+  return Math.max(28, 8 + lines.length * 20);
+}
+
+function drawPortraitCard(ctx, s, x, y, w) {
+  let cy;
+  if (s.status === "live" && s.live) {
+    drawLive(ctx, s, x, y);
+    cy = y + 100;
+  } else {
+    const end = drawScorebug(ctx, s, x, y, {
+      logoSize: 60,
+      scoreSize: 34,
+      leftInset: 0,
+      topInset: 2,
+    });
+    const played = lastGamePlayedLabel(s);
+    if (played) {
+      txt(ctx, "FINAL", end + 16, y + 12, 15, "700", INK.black);
+      txt(ctx, played, end + 16, y + 31, 15, "400", INK.black);
+    }
+    cy = y + 88;
+  }
+
+  if (s.summary) {
+    const font = "400 18px " + fam();
+    fitTextToLines(ctx, s.summary, 2, w, font)
+      .forEach((ln) => { txt(ctx, ln, x, cy, 18, "400", INK.black); cy += 24; });
+    cy += 14;
+  }
+
+  const hotH = drawPortraitPlayerList(ctx, s, x, cy, w, "hot");
+  cy += hotH;
+  const coldH = drawPortraitPlayerList(ctx, s, x, cy, w, "cold");
+  cy += coldH;
+  if (s.next != null) {
+    if (hotH || coldH) cy += 16;
+    const p = nextGameParts(String(s.next));
+    const timeX = x + 22;
+    drawCalendar(ctx, x, cy + 2, INK.black);
+    txt(ctx, p.when, timeX, cy, 17, "600", INK.black);
+    if (p.matchup) {
+      ctx.font = "600 17px " + fam();
+      txt(ctx, p.matchup, timeX + Math.ceil(ctx.measureText(p.when).width) + 6, cy, 17, "400", INK.black);
+    }
+    cy += 44;
+  }
+  return cy;
+}
+
+function renderPortrait(ctx) {
+  const secs = lastDash.sections;
+  const card = secs.filter((s) => s.type === "teamCard")[0];
+  const alTables = secs.filter(
+    (s) => s.type === "standings" && /^al/i.test(String(s.id || "")),
+  );
+  const padX = M;
+  const padTop = 24;
+  const padBottom = M;
+  const innerW = W - 2 * padX;
+
+  ctx.textAlign = "right";
+  txt(ctx, lastDash.footer || "", W - padX, 6, 12, "400", INK.black);
+  ctx.textAlign = "left";
+
+  let y = padTop;
+  if (card) {
+    y = drawPortraitCard(ctx, card, padX, y, innerW) + 4;
+  }
+  for (let i = 0; i < alTables.length; i++) {
+    const isLast = i === alTables.length - 1;
+    // The last table gets whatever vertical room remains, clamped to its rows.
+    const avail = H - padBottom - y - 37; // minus this table's header band
+    const maxRows = isLast ? Math.max(3, Math.floor(avail / 27)) : undefined;
+    y += drawPortraitTable(ctx, alTables[i], padX, y, innerW, maxRows) + 14;
+  }
+}
+
 function render() {
   setLayout();
   const cv = document.getElementById("screen");
@@ -1130,6 +1322,7 @@ function render() {
   if (RENDER_SCALE !== 1) ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
   ctx.fillStyle = INK.paper; ctx.fillRect(0, 0, W, H);
   if (!lastDash) { quantize(ctx); return; }
+  if (deviceKey === "e1002p") { renderPortrait(ctx); quantize(ctx, W, H); return; }
 
   const secs = lastDash.sections;
   const cards = secs.filter(s => s.type === "teamCard").slice(0, MAX_CARDS);

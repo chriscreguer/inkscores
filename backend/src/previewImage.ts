@@ -31,10 +31,21 @@ for (const face of SF_PRO_TEXT_FACES) {
   }
 }
 
+export type PreviewImageDevice = "e1002" | "e1002p";
+
 export const PREVIEW_IMAGE_WIDTH = 800;
 export const PREVIEW_IMAGE_HEIGHT = 480;
 export const PREVIEW_IMAGE_PACKED_BYTES =
   (PREVIEW_IMAGE_WIDTH * PREVIEW_IMAGE_HEIGHT) / 2;
+
+export function previewImageDimensions(device: PreviewImageDevice = "e1002"): {
+  width: number;
+  height: number;
+} {
+  return device === "e1002p"
+    ? { width: 480, height: 800 }
+    : { width: PREVIEW_IMAGE_WIDTH, height: PREVIEW_IMAGE_HEIGHT };
+}
 
 const PALETTE = [
   [43, 43, 43],
@@ -74,8 +85,12 @@ function nearestPaletteIndex(r: number, g: number, b: number): number {
   return best;
 }
 
-export async function renderPreviewImage4bpp(dashboard: Dashboard): Promise<Buffer> {
-  const canvas = createCanvas(PREVIEW_IMAGE_WIDTH, PREVIEW_IMAGE_HEIGHT) as any;
+export async function renderPreviewImage4bpp(
+  dashboard: Dashboard,
+  device: PreviewImageDevice = "e1002",
+): Promise<Buffer> {
+  const { width, height } = previewImageDimensions(device);
+  const canvas = createCanvas(width, height) as any;
   canvas.style = {};
 
   const elements: Record<string, any> = {
@@ -90,7 +105,7 @@ export async function renderPreviewImage4bpp(dashboard: Dashboard): Promise<Buff
     location: { search: "" },
     localStorage: {
       getItem: (key: string) => {
-        if (key === "inkDevice") return "e1002";
+        if (key === "inkDevice") return device;
         if (key === "inkFont") return "SF Pro";
         // Supersample 3x so small SF Pro text keeps its stems when the renderer
         // boxes each block down to a single Spectra ink (see quantize()).
@@ -121,8 +136,8 @@ export async function renderPreviewImage4bpp(dashboard: Dashboard): Promise<Buff
   await context.__loadPromise;
 
   const ctx = canvas.getContext("2d");
-  const pixels = ctx.getImageData(0, 0, PREVIEW_IMAGE_WIDTH, PREVIEW_IMAGE_HEIGHT).data;
-  const packed = Buffer.alloc(PREVIEW_IMAGE_PACKED_BYTES);
+  const pixels = ctx.getImageData(0, 0, width, height).data;
+  const packed = Buffer.alloc((width * height) / 2);
 
   for (let i = 0, j = 0; i < pixels.length; i += 8, j++) {
     const left = nearestPaletteIndex(pixels[i] ?? 0, pixels[i + 1] ?? 0, pixels[i + 2] ?? 0);

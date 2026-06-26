@@ -20,8 +20,8 @@ type Any = any;
 const RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_MODEL = "gpt-4o-mini";
 
-/** Hard cap on a recap line (replaces the old ~20-word limit). */
-const MAX_SUMMARY_LEN = 112;
+/** Hard cap on a recap line so portrait summaries naturally fit in two lines. */
+const MAX_SUMMARY_LEN = 100;
 
 /** Hard cap on a displayed player name (the chips are tiny). */
 const MAX_NAME_LEN = 11;
@@ -133,7 +133,7 @@ function recapPrompt(ctx: EditorialContext): string {
       `restate it.`;
   }
   return (
-    `In ${MAX_SUMMARY_LEN} characters or fewer, give most relevant talking ` +
+    `In ${MAX_SUMMARY_LEN} characters or fewer and no more than 16 words, give most relevant talking ` +
     `points about the ${ctx.teamName} after their most recent game. Be as ` +
     `concise as possible. Do NOT state anything obvious from the box score — ` +
     `no final score, no who won or lost, no run/point totals. Focus on the ` +
@@ -159,7 +159,20 @@ export function extractResponseText(data: Any): string {
 export function cleanSummary(text: string): string | undefined {
   const line = text.replace(/\s+/g, " ").replace(/^["']|["']$/g, "").trim();
   if (!line.length) return undefined;
-  return line.length > MAX_SUMMARY_LEN ? line.slice(0, MAX_SUMMARY_LEN).trimEnd() : line;
+  if (line.length <= MAX_SUMMARY_LEN) return line;
+  const hard = line.slice(0, MAX_SUMMARY_LEN + 1);
+  const lastSpace = hard.lastIndexOf(" ");
+  return (lastSpace > 0 ? hard.slice(0, lastSpace) : hard.slice(0, MAX_SUMMARY_LEN)).trimEnd();
+}
+
+function cleanEditorial(value: Editorial | undefined): Editorial | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const out: Editorial = {};
+  if (typeof value.summary === "string") {
+    const summary = cleanSummary(value.summary);
+    if (summary) out.summary = summary;
+  }
+  return out;
 }
 
 /** Apply the special-case short forms and the hard length cap to a name. */
@@ -225,8 +238,8 @@ export function createEditorialClient(deps: EditorialDeps = {}): EditorialClient
     const finalKey = ctx.lastFinalKey ?? "none";
     const fullKey = `editorial:game:${teamKey}:${finalKey}`;
     if (!force) {
-      const cached = store.get<Editorial>(fullKey);
-      if (cached && typeof cached === "object") return cached;
+      const cached = cleanEditorial(store.get<Editorial>(fullKey));
+      if (cached) return cached;
     }
 
     const pending = inFlight.get(fullKey);
@@ -242,7 +255,10 @@ export function createEditorialClient(deps: EditorialDeps = {}): EditorialClient
         force,
       );
       const editorial: Editorial = {};
-      if (summary) editorial.summary = summary;
+      if (summary) {
+        const clean = cleanSummary(summary);
+        if (clean) editorial.summary = clean;
+      }
       store.set(fullKey, editorial);
       return editorial;
     })();
@@ -262,8 +278,8 @@ export function createEditorialClient(deps: EditorialDeps = {}): EditorialClient
     if (!apiKey) return { editorial: {}, pending: false };
     const finalKey = ctx.lastFinalKey ?? "none";
     const fullKey = `editorial:game:${teamKey}:${finalKey}`;
-    const cached = store.get<Editorial>(fullKey);
-    if (cached && typeof cached === "object") {
+    const cached = cleanEditorial(store.get<Editorial>(fullKey));
+    if (cached) {
       return { editorial: cached, pending: false };
     }
     // Not cached yet: generate in the background (deduped via inFlight, and the

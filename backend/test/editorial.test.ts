@@ -35,10 +35,11 @@ describe("cleanSummary", () => {
   it("returns undefined for empty text", () => {
     expect(cleanSummary("   ")).toBeUndefined();
   });
-  it("hard-caps at 112 characters", () => {
+  it("hard-caps at 100 characters", () => {
     const long = "a ".repeat(120).trim(); // ~239 chars
     const out = cleanSummary(long)!;
-    expect(out.length).toBeLessThanOrEqual(112);
+    expect(out.length).toBeLessThanOrEqual(100);
+    expect(out).not.toContain("…");
   });
 });
 

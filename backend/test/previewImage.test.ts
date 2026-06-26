@@ -15,6 +15,13 @@ describe("preview image renderer", () => {
     expect(image.some((byte) => byte !== 0x11)).toBe(true);
   });
 
+  it("renders the 480x800 portrait preview as packed 4bpp palette data", async () => {
+    const image = await renderPreviewImage4bpp(featured as unknown as Dashboard, "e1002p");
+
+    expect(image.length).toBe(PREVIEW_IMAGE_PACKED_BYTES);
+    expect(image.some((byte) => byte !== 0x11)).toBe(true);
+  });
+
   // Regression guard: without the bundled SF Pro Text faces, @napi-rs/canvas
   // falls back to a serif font and the device image stops matching the "Real"
   // tab prototype. Importing previewImage must register the family.

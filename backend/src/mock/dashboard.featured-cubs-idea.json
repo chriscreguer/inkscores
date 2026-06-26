@@ -27,9 +27,9 @@
       "record": "42-34",
       "standing": "AL Central: 2nd, 2.5 GB",
       "accent": "blue",
-      "summary": "Blew early 2-0 lead; Casey Mize still struggling, Dillon Dingler stayed hot, Ben Malgeri impressed in MLB debut.",
-      "hot": ["Dingler", "Malgeri", "Greene"],
-      "cold": ["Mize", "Baez"]
+      "summary": "Blew early lead; Mize struggled, but Dingler and Greene stayed hot.",
+      "hot": ["Dingler (.964)", "Malgeri (1.018)", "Greene (.891)"],
+      "cold": ["Mize (6.21)", "Baez (.512)"]
     },
     {
       "type": "teamCard",
@@ -49,22 +49,22 @@
       "record": "39-37",
       "standing": "NL Central: 3rd, 4.5 GB",
       "accent": "blue",
-      "summary": "Dropped another to STL; Busch and Suzuki still carry the thump, while the cold bats need to wake up before PIT."
+      "summary": "Busch and Suzuki still carry the thump; cold bats need a lift."
     },
     {
       "type": "standings",
       "id": "al-central",
       "title": "AL Central",
-      "columns": ["#", "Team", "Record", "GB", "L5"],
+      "columns": ["#", "Team", "Record", "GB", "L10"],
       "highlightTeamKeys": ["tigers"],
       "highlightRows": [1],
       "accent": "blue",
       "rows": [
-        ["1", "CLE", "44-31", "-", "LWLWW"],
-        ["2", "DET", "42-34", "2.5", "WWWWL"],
-        ["3", "KC", "38-38", "6.5", "WLWWL"],
-        ["4", "MIN", "36-40", "8.5", "WLWLL"],
-        ["5", "CWS", "28-48", "16.5", "LLWLW"]
+        ["1", "CLE", "44-31", "-", "WWLLWLWLWW"],
+        ["2", "DET", "42-34", "2.5", "LWWWLWWWWL"],
+        ["3", "KC", "38-38", "6.5", "WLLWWWLWWL"],
+        ["4", "MIN", "36-40", "8.5", "LWLLWWLWLL"],
+        ["5", "CWS", "28-48", "16.5", "LLLLWLLWLW"]
       ]
     },
     {

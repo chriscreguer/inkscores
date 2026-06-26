@@ -14,6 +14,14 @@
 // firmware defaults to the production InkScores endpoint.
 // #define DASHBOARD_IMAGE_URL "https://your-domain.com/api/dashboard.4bpp"
 
+// Button used to toggle landscape/portrait bitmap mode while the device sleeps.
+// The E1002 programmable buttons are commonly exposed as GPIO3/GPIO4/GPIO5;
+// change this if you wire a different button.
+#define VIEW_BUTTON_PIN 3
+#define VIEW_BUTTON_ACTIVE_LOW 1
+// If portrait is upside down on the physical device, change this to 3.
+#define PORTRAIT_DISPLAY_ROTATION 1
+
 // Fallback sleep interval (seconds) if the backend does not provide
 // refreshAfterSeconds. 7200 = 2 hours.
 #define DEFAULT_SLEEP_SECONDS 7200
