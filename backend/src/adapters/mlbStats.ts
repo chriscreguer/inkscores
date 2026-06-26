@@ -539,7 +539,9 @@ export function createMlbStatsAdapter(deps?: MlbStatsDeps): MlbStatsAdapter {
         if (!entry) return { hot: [], cold: [] };
         const teamId = Number(entry[0]);
         const end = now();
-        const start = new Date(end.getTime() - 14 * 24 * 60 * 60 * 1000);
+        // ~10 days ≈ the last 10 games. Longer windows drag in stale stretches
+        // and mislabel a player who's been fine lately as cold.
+        const start = new Date(end.getTime() - 10 * 24 * 60 * 60 * 1000);
         const yr = season();
         const [hitRaw, pitRaw] = await Promise.all([
           fetchJson(dateRangeStatsUrl("hitting", teamId, start, end, yr)).catch(() => null),
