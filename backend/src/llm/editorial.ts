@@ -63,7 +63,11 @@ export interface EditorialDeps {
 }
 
 export interface EditorialClient {
-  generate(teamKey: string, ctx: EditorialContext): Promise<Editorial>;
+  generate(
+    teamKey: string,
+    ctx: EditorialContext,
+    opts?: { force?: boolean },
+  ): Promise<Editorial>;
   /**
    * Non-blocking accessor: return the cached editorial immediately if present,
    * otherwise kick off generation in the background and return an empty result
@@ -244,20 +248,30 @@ export function createEditorialClient(deps: EditorialDeps = {}): EditorialClient
     cacheKey: string,
     produce: () => Promise<T | undefined>,
     isPresent: (v: T | undefined) => boolean,
+    force = false,
   ): Promise<T | undefined> {
-    const cached = store.get<T>(cacheKey);
-    if (isPresent(cached)) return cached;
+    if (!force) {
+      const cached = store.get<T>(cacheKey);
+      if (isPresent(cached)) return cached;
+    }
     const value = await produce().catch(() => undefined);
     if (isPresent(value)) store.set(cacheKey, value);
     return value;
   }
 
-  async function generate(teamKey: string, ctx: EditorialContext): Promise<Editorial> {
+  async function generate(
+    teamKey: string,
+    ctx: EditorialContext,
+    opts: { force?: boolean } = {},
+  ): Promise<Editorial> {
     if (!apiKey) return {};
+    const force = opts.force ?? false;
     const finalKey = ctx.lastFinalKey ?? "none";
     const fullKey = `editorial:game:${teamKey}:${finalKey}`;
-    const cached = store.get<Editorial>(fullKey);
-    if (cached && typeof cached === "object") return cached;
+    if (!force) {
+      const cached = store.get<Editorial>(fullKey);
+      if (cached && typeof cached === "object") return cached;
+    }
 
     const pending = inFlight.get(fullKey);
     if (pending) return pending;
@@ -268,11 +282,13 @@ export function createEditorialClient(deps: EditorialDeps = {}): EditorialClient
           `editorial:summary:${teamKey}:${finalKey}`,
           async () => cleanSummary(await ask(recapPrompt(ctx))),
           (v) => typeof v === "string" && v.length > 0,
+          force,
         ),
         piece<{ hot?: string[]; cold?: string[] }>(
           `editorial:hotcold:${teamKey}:${finalKey}`,
           async () => parseHotCold(await ask(hotColdPrompt(ctx))),
           (v) => Boolean(v && (v.hot || v.cold)),
+          force,
         ),
       ]);
 

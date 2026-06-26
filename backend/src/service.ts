@@ -43,6 +43,8 @@ export interface BuildLiveOptions {
   editorial?: EditorialClient;
   /** Optional real make-playoffs odds (B-Ref) for the playoff-table column. */
   brefOdds?: BrefOddsAdapter;
+  /** Debug: regenerate editorial synchronously, bypassing the per-game cache. */
+  forceEditorial?: boolean;
 }
 
 /** Featured services bundled separately from the per-sport adapter registry. */
@@ -177,13 +179,19 @@ async function assembleFeaturedDashboard(
       if (t.summary?.isLive) continue;
       const lastLine = t.card.last && t.card.last !== "—" ? t.card.last : undefined;
       const lastFinalKey = t.summary?.lastGame?.date;
-      const { editorial: ed, pending } = editorial.getOrQueue(t.team.key, {
+      const ctx = {
         teamName: t.team.fullName,
         ...(lastLine ? { lastGameLine: lastLine } : {}),
         ...(lastFinalKey ? { lastFinalKey } : {}),
-      });
-      t.editorial = ed;
-      if (pending) awaitingEditorial = true;
+      };
+      if (options.forceEditorial) {
+        // Debug path: regenerate now (synchronous), overwriting the cache.
+        t.editorial = await editorial.generate(t.team.key, ctx, { force: true });
+      } else {
+        const { editorial: ed, pending } = editorial.getOrQueue(t.team.key, ctx);
+        t.editorial = ed;
+        if (pending) awaitingEditorial = true;
+      }
     }
   }
 

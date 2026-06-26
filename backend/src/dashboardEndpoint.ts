@@ -11,6 +11,8 @@ const DEBUG_SPORTS: Sport[] = ["mlb", "nba", "ncaaf", "ncaamb"];
 export interface DashboardQuery {
   mock?: string;
   debug?: string;
+  /** Debug: "1"/"true" forces a fresh editorial recap, bypassing the cache. */
+  forceEditorial?: string;
 }
 
 export interface ResolveOptions {
@@ -75,12 +77,16 @@ export async function resolveDashboardResponse(
     const debugSports =
       debug && DEBUG_SPORTS.includes(debug as Sport) ? [debug as Sport] : undefined;
 
+    const forceEditorial =
+      query.forceEditorial === "1" || query.forceEditorial === "true";
+
     const dashboard = await build({
       now,
       adapters: options.adapters,
       ...(options.featured ? options.featured : {}),
       ...(debugShowAll ? { debugShowAll: true } : {}),
       ...(debugSports ? { debugSports } : {}),
+      ...(forceEditorial ? { forceEditorial: true } : {}),
     });
 
     return { dashboard, cacheControlSeconds: dashboard.refreshAfterSeconds };
