@@ -105,22 +105,21 @@ function recapPrompt(ctx: EditorialContext): string {
     ? ` For context their most recent game finished ${ctx.lastGameLine}, but treat that as already known — do not restate it.`
     : "";
   return (
-    `In ${MAX_SUMMARY_LEN} characters or fewer, give the single most relevant ` +
-    `talking point about the ${ctx.teamName} after their most recent game. ` +
-    `Be as concise as possible. Do NOT state anything obvious from the box ` +
-    `score — no final score, no who won or lost, no run/point totals. Focus on ` +
-    `why it mattered or what's next: a standout or slumping player, an injury, ` +
-    `a streak, a roster move, or a standings implication. Only reference players ` +
-    `actually on the team's active roster this season — never retired or former ` +
-    `players.${grounding} Reply with the sentence only — no preamble, no quotes.`
+    `In ${MAX_SUMMARY_LEN} characters or fewer, give most relevant talking ` +
+    `points about the ${ctx.teamName} after their most recent game. Be as ` +
+    `concise as possible. Do NOT state anything obvious from the box score — ` +
+    `no final score, no who won or lost, no run/point totals. Focus on the ` +
+    `overarching storyline for the team.${grounding} Reply with the sentence ` +
+    `only — no preamble, no quotes.`
   );
 }
 
 function hotColdPrompt(ctx: EditorialContext): string {
   return (
-    `Which players are hot and which players are cold on the ${ctx.teamName} ` +
-    `right now? Max 3 per category, only list a player if they are genuinely ` +
-    `hot or cold. For each player, use their last name only — but if a player ` +
+    `Over the last 10 games the ${ctx.teamName} have played, which players ` +
+    `are hot and which players are cold? Max 3 per category, only list a ` +
+    `player if they are genuinely hot or cold. For each player, use their ` +
+    `last name only — but if a player ` +
     `has a widely-known nickname or short form that is shorter (for example ` +
     `initials for a long hyphenated name, like "PCA" for Pete Crow-Armstrong), ` +
     `use that. Keep every name as short as possible. ` +
