@@ -144,17 +144,19 @@ function teamAbbrFor(s) {
 
 function parseLastGame(last) {
   const t = String(last == null ? "" : last);
-  const m = t.match(/^([WLT])?\s*(\d+)\s*-\s*(\d+)\s+(?:vs|@)\s+([A-Z0-9]+)\b/i);
+  const m = t.match(/^([WLT])?\s*(\d+)\s*-\s*(\d+)\s+(vs|@)\s+([A-Z0-9]+)\b/i);
   if (!m) return null;
   const result = (m[1] || "").toUpperCase();
-  const a = m[2], b = m[3], opponent = m[4].toUpperCase();
+  const usScore = m[2], opponentScore = m[3], venue = m[4], opponent = m[5].toUpperCase();
+  const watchedHome = venue.toLowerCase() === "vs";
   return {
     result,
+    venue,
     opponent,
-    // Scorebug is opponent-left, watched-team-right. Loss strings are written
-    // like "L 3-2 vs NYY"; win strings like "W 5-3 vs CLE".
-    leftScore: result === "W" ? b : a,
-    rightScore: result === "W" ? a : b,
+    leftScore: watchedHome ? opponentScore : usScore,
+    rightScore: watchedHome ? usScore : opponentScore,
+    leftSide: watchedHome ? "opponent" : "team",
+    rightSide: watchedHome ? "team" : "opponent",
   };
 }
 
@@ -500,12 +502,14 @@ function drawScorebug(ctx, s, x, y) {
   const sx = x + 12;
   const sy = y + 10;
 
-  drawOpponentMark(ctx, opponent, sx, sy, logoSize);
+  if (parsed?.leftSide === "team") drawTeamLogoMark(ctx, s, sx, sy, logoSize);
+  else drawOpponentMark(ctx, opponent, sx, sy, logoSize);
   ctx.fillStyle = INK.black; ctx.textBaseline = "middle";
   ctx.fillText(score, sx + logoSize + gap, sy + logoSize / 2 + 1);
   ctx.textBaseline = "top";
   const teamX = sx + logoSize + gap + scoreW + gap;
-  drawTeamLogoMark(ctx, s, teamX, sy, logoSize);
+  if (parsed?.rightSide === "opponent") drawOpponentMark(ctx, opponent, teamX, sy, logoSize);
+  else drawTeamLogoMark(ctx, s, teamX, sy, logoSize);
   return teamX + logoSize;
 }
 
@@ -594,19 +598,24 @@ function drawLiveScorebug(ctx, s, x, y) {
   const logoSize = LOGOS.size || 44;
   const sx = x + 12;
   const sy = y + 10;
-  let score = String(L.score == null ? "—" : L.score);
+  const rawScore = String(L.score == null ? "—" : L.score);
+  let score = rawScore;
   const m = score.match(/^(\d+)\s*-\s*(\d+)$/);
-  if (m) score = m[2] + " - " + m[1];
+  const watchedHome = L.homeAway !== "away";
+  if (m) score = watchedHome ? (m[2] + " - " + m[1]) : (m[1] + " - " + m[2]);
   else score = score.replace("-", " - ");
 
   ctx.font = "800 24px " + fam();
   const scoreW = Math.ceil(ctx.measureText(score).width);
   const gap = 9;
-  drawOpponentMark(ctx, opponent, sx, sy, logoSize);
+  if (watchedHome) drawOpponentMark(ctx, opponent, sx, sy, logoSize);
+  else drawTeamLogoMark(ctx, s, sx, sy, logoSize);
   ctx.fillStyle = INK.black; ctx.textBaseline = "middle";
   ctx.fillText(score, sx + logoSize + gap, sy + logoSize / 2 + 1);
   ctx.textBaseline = "top";
-  drawTeamLogoMark(ctx, s, sx + logoSize + gap + scoreW + gap, sy, logoSize);
+  const rightX = sx + logoSize + gap + scoreW + gap;
+  if (watchedHome) drawTeamLogoMark(ctx, s, rightX, sy, logoSize);
+  else drawOpponentMark(ctx, opponent, rightX, sy, logoSize);
 }
 
 function drawLiveBadge(ctx, x, y) {

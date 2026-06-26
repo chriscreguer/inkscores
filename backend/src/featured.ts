@@ -25,20 +25,14 @@ function abbrOf(team: WatchedTeam): string {
   return team.espnTeamSlug.toUpperCase();
 }
 
-/**
- * Last-game line ordered the way the renderer's scorebug parser expects: the
- * winner's score first. The normalized score is always "us-them", so a loss
- * must be flipped to "them-us" or the scorebug would show the wrong winner.
- */
+/** Last-game line in watched-team score order: score is always "us-them". */
 export function scorebugLastLine(game: NormalizedGame): string {
   const m = String(game.score ?? "").match(/^(\d+)-(\d+)$/);
   if (!m) return formatLastGame(game) ?? "—";
   const us = m[1]!;
   const them = m[2]!;
   const venue = game.homeAway === "home" ? "vs" : "@";
-  if (game.result === "L") return `L ${them}-${us} ${venue} ${game.opponent}`;
-  if (game.result === "T") return `T ${us}-${them} ${venue} ${game.opponent}`;
-  return `W ${us}-${them} ${venue} ${game.opponent}`;
+  return `${game.result ?? ""} ${us}-${them} ${venue} ${game.opponent}`.trim();
 }
 
 export interface FeaturedTeamInput {

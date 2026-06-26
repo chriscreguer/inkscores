@@ -27,16 +27,20 @@ const tigers: WatchedTeam = {
 };
 
 describe("scorebugLastLine", () => {
-  it("keeps a win us-first (winner first)", () => {
+  it("keeps an away win in watched-team score order", () => {
     expect(
       scorebugLastLine({ date: "x", opponent: "CLE", homeAway: "away", result: "W", score: "5-3" }),
     ).toBe("W 5-3 @ CLE");
   });
-  it("flips a loss so the winner's score is first", () => {
-    // normalized score is us-them = "2-3"; the scorebug needs winner (NYY) first.
+  it("keeps a home loss in watched-team score order", () => {
     expect(
       scorebugLastLine({ date: "x", opponent: "NYY", homeAway: "home", result: "L", score: "2-3" }),
-    ).toBe("L 3-2 vs NYY");
+    ).toBe("L 2-3 vs NYY");
+  });
+  it("keeps an away loss in watched-team score order", () => {
+    expect(
+      scorebugLastLine({ date: "x", opponent: "STL", homeAway: "away", result: "L", score: "4-7" }),
+    ).toBe("L 4-7 @ STL");
   });
   it("falls back to the plain formatter when there is no numeric score", () => {
     expect(
@@ -70,7 +74,7 @@ describe("buildFeaturedCard", () => {
     expect(card.cardVariant).toBe("scorebug");
     expect(card.teamAbbr).toBe("DET");
     expect(card.scorebugOpponent).toBe("NYY");
-    expect(card.last).toBe("L 3-2 vs NYY"); // winner-first
+    expect(card.last).toBe("L 2-3 vs NYY");
     expect(card.lastGame).toEqual({ date: "2026-06-24" });
     expect(card.summary).toBe("Bats went quiet late.");
     expect(card.hot).toEqual(["Greene"]);
