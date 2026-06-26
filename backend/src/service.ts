@@ -261,9 +261,13 @@ export function createDefaultFeaturedServices(
     mlbStats: createMlbStatsAdapter({ cache, now }),
     brefOdds: createBrefOddsAdapter({ cache, now }),
     // Persist editorial so each game's recap + hot/cold is generated once, even
-    // across restarts.
+    // across restarts. Defaults to a local .cache dir; set EDITORIAL_CACHE_DIR
+    // to a mounted persistent volume (e.g. /data on Railway) so the cache also
+    // survives container restarts and redeploys instead of being regenerated.
     editorial: createEditorialClient({
-      store: fileStore(`${process.cwd()}/.cache/editorial.json`),
+      store: fileStore(
+        `${process.env.EDITORIAL_CACHE_DIR ?? `${process.cwd()}/.cache`}/editorial.json`,
+      ),
     }),
   };
 }

@@ -25,6 +25,19 @@ caveats. Config files for both are included.
 Railway services stay running (no idle spin-down while you have credit/usage),
 so refreshes are reliable and there's no cold-start vs. the device's 8s timeout.
 
+### Persist the editorial cache (recommended)
+
+The AI recap + hot/cold lists are generated once per game and cached on disk.
+The container filesystem is **ephemeral**, so without a volume that cache is
+wiped on every restart/redeploy and each game's summary gets regenerated (a new
+OpenAI call, and a different sentence each time). To make it stable:
+
+1. In the service: **Settings → Volumes → Add Volume**, mount path `/data`.
+2. In **Variables**, add `EDITORIAL_CACHE_DIR=/data`.
+
+Now each summary is generated once and survives restarts. Delete the volume's
+`editorial.json` if you ever want to force regeneration.
+
 ## Render (alternative, Blueprint)
 
 ## Render (Blueprint)
