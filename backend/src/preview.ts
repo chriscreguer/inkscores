@@ -1268,11 +1268,9 @@ function drawPortraitLiveScorebug(ctx, s, x, y) {
   if (leftTeam) drawOpponentMark(ctx, opponent, rightX, sy, logoSize);
   else drawTeamLogoMark(ctx, s, rightX, sy, logoSize);
 
-  txt(ctx, "LIVE", rightX + logoSize + 16, y + 12, 15, "700", INK.red);
-  const detail = String(L.detail || "").trim();
-  const outs = Number(L.outs);
-  const outsText = Number.isFinite(outs) ? String(outs) + " out" + (outs === 1 ? "" : "s") : "";
-  txt(ctx, [detail, outsText].filter(Boolean).join(", "), rightX + logoSize + 16, y + 31, 15, "400", INK.black);
+  const basesSize = 48;
+  const basesX = Math.min(x + 332, rightX + logoSize + 21);
+  drawBases(ctx, basesX, y + 9, basesSize, L.onFirst, L.onSecond, L.onThird, INK.black);
 }
 
 function drawPortraitWinProbabilityBar(ctx, s, x, y, w, probability) {
@@ -1299,28 +1297,10 @@ function drawPortraitWinProbabilityBar(ctx, s, x, y, w, probability) {
 
 function drawPortraitLiveDetails(ctx, s, x, y, w) {
   const L = s.live || {};
-  const basesSize = 32;
-  const detail = String(L.detail == null ? "" : L.detail).trim();
-  const m = detail.match(/^(top|bottom|bot)\s+(.*)$/i);
-  const statusX = x + basesSize + 14;
-  let dx = statusX;
-  let rest = detail || "Live";
-
-  drawBases(ctx, x + 1, y + 1, basesSize, L.onFirst, L.onSecond, L.onThird, INK.black);
-  if (m) {
-    drawCaret(ctx, dx, y + 8, m[1].toLowerCase()[0] === "t", INK.black);
-    dx += 13;
-    rest = m[2];
-  }
-  txt(ctx, rest, dx, y + 3, 15, "700", INK.black);
-  const outs = Number(L.outs);
-  drawOuts(ctx, statusX, y + 25, Number.isFinite(outs) ? outs : 0, INK.black);
-
-  const probX = x + 124;
-  drawPortraitWinProbabilityBar(ctx, s, probX, y + 7, x + w - probX, L.winProbability);
+  drawPortraitWinProbabilityBar(ctx, s, x, y, w, L.winProbability);
 
   const stats = (L.topPlayers || s.topPlayers || []).map((v) => String(v)).filter(Boolean);
-  let cy = y + 45;
+  let cy = y + 27;
   if (stats.length) {
     const font = "400 16px " + fam();
     for (const line of layoutStatLines(ctx, stats, w, font, 2)) {
@@ -1329,14 +1309,14 @@ function drawPortraitLiveDetails(ctx, s, x, y, w) {
     }
     cy += 4;
   }
-  return Math.max(cy, y + 45);
+  return Math.max(cy, y + 27);
 }
 
 function drawPortraitCard(ctx, s, x, y, w) {
   let cy;
   if (s.status === "live" && s.live) {
     drawPortraitLiveScorebug(ctx, s, x, y);
-    cy = drawPortraitLiveDetails(ctx, s, x, y + 82, w) + 10;
+    cy = drawPortraitLiveDetails(ctx, s, x, y + 81, w) + 10;
   } else {
     const end = drawScorebug(ctx, s, x, y, {
       logoSize: 60,
