@@ -808,7 +808,7 @@ function drawHotCold(ctx, x, hy, s) {
 // Recent-form dots (up to 10): win = solid green, loss = dithered light-red.
 // Oldest left. A tighter dot/gap keeps ten markers inside the form column.
 function drawForm(ctx, x, y, form) {
-  const cy = y + 8, r = 4.8, gap = 11;
+  const cy = y + 8, r = 4.8, gap = 13.5;
   const s = String(form || "");
   if (!/^[WLwl]{2,10}$/.test(s)) {
     txt(ctx, s || "—", x, y, 15, "400", INK.black);

@@ -235,6 +235,39 @@ bool isHighlightRow(const JsonObjectConst& s, int i) {
   return false;
 }
 
+bool isFormHeader(const char* value) {
+  if (value == nullptr) return false;
+  String h(value);
+  h.toLowerCase();
+  return h == "l5" || h == "l10" || h == "form";
+}
+
+bool isFormValue(const String& value) {
+  const int n = value.length();
+  if (n < 2 || n > 10) return false;
+  for (int i = 0; i < n; i++) {
+    const char c = value[i];
+    if (c != 'W' && c != 'w' && c != 'L' && c != 'l') return false;
+  }
+  return true;
+}
+
+void drawFormDots(int x, int y, const String& form) {
+  if (!isFormValue(form)) {
+    drawText(x, y, form.length() ? form : String("-"), 2, GxEPD_BLACK);
+    return;
+  }
+
+  const int r = 4;
+  const int gap = 14;
+  const int cy = y + 9;
+  for (int i = 0; i < form.length() && i < 10; i++) {
+    const char c = form[i];
+    const uint16_t color = (c == 'W' || c == 'w') ? GxEPD_GREEN : GxEPD_RED;
+    display.fillCircle(x + r + i * gap, cy, r, color);
+  }
+}
+
 // Draw one standings table at the given top-left corner with the given width.
 void renderStandings(const JsonObjectConst& s, int x, int y, int w, int h) {
   using namespace layout;
@@ -243,6 +276,8 @@ void renderStandings(const JsonObjectConst& s, int x, int y, int w, int h) {
   drawText(x, y, fitText(str(s, "title", "Standings"), 22), 2, GxEPD_BLACK);
   display.drawFastHLine(x, y + 20, w, GxEPD_BLACK);
 
+  JsonArrayConst columns = s["columns"].as<JsonArrayConst>();
+  const bool hasFormColumn = isFormHeader(columns[4] | "");
   JsonArrayConst rows = s["rows"].as<JsonArrayConst>();
   int ry = y + 30;
   const int rowH = 22;
@@ -258,7 +293,8 @@ void renderStandings(const JsonObjectConst& s, int x, int y, int w, int h) {
     if (hot) display.fillRect(x - 2, ry - 3, w + 2, rowH, GxEPD_YELLOW);
     const uint16_t teamColor = hot ? accent : GxEPD_BLACK;
 
-    // Columns: rank, team, record, [gb]. Fixed x offsets keep rows aligned.
+    // Columns: rank, team, record, GB, optional L10/form dots. Fixed x offsets
+    // keep rows aligned inside the 379px half-screen standings column.
     const char* rank = row[0] | "";
     const char* team = row[1] | "";
     const char* rec = row[2] | "";
@@ -266,7 +302,10 @@ void renderStandings(const JsonObjectConst& s, int x, int y, int w, int h) {
     drawText(x, ry, String(rank), 2, GxEPD_BLACK);
     drawText(x + 28, ry, String(team), 2, teamColor);
     drawText(x + 120, ry, String(rec), 2, GxEPD_BLACK);
-    drawText(x + 220, ry, String(gb), 2, GxEPD_BLACK);
+    drawText(x + 194, ry, String(gb), 2, GxEPD_BLACK);
+    if (hasFormColumn) {
+      drawFormDots(x + 246, ry, String(row[4] | ""));
+    }
     ry += rowH;
     count++;
   }
