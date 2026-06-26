@@ -108,10 +108,10 @@ let LOGOS = { size:0, logos:{}, keyMap:{} };
 let RASTER_LOGOS = {};
 let lastDash = null;
 let zoom = 1;
-let fontLabel = "IBM Plex Sans";
-try { fontLabel = localStorage.getItem("inkFont") || "IBM Plex Sans"; } catch (e) {}
+let fontLabel = "SF Pro";
+try { fontLabel = localStorage.getItem("inkFont") || "SF Pro"; } catch (e) {}
 
-function fam() { return (FONTS[fontLabel] || FONTS["IBM Plex Sans"])[0]; }
+function fam() { return (FONTS[fontLabel] || FONTS["SF Pro"])[0]; }
 function cardH() {
   return (lastDash && lastDash.theme && Number(lastDash.theme.cardHeight)) || CARD_H;
 }

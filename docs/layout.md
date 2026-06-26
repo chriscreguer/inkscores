@@ -41,8 +41,11 @@ Defined in `firmware/src/dashboard_types.h`:
 
 ## Type sizes
 
-The firmware uses the Adafruit GFX built-in font scaled with `setTextSize` to
-avoid bundling font files:
+The firmware uses locally generated SF Pro bitmap fonts when
+`firmware/src/sf_pro_fonts.h` exists. Generate that file with
+`tools/gen-sf-pro-fonts.sh`; it is gitignored because it contains bitmap data
+from the user's licensed SF Pro font files. Without that local file, the
+firmware falls back to the Adafruit GFX built-in font scaled with `setTextSize`:
 
 | Element | size |
 |---------|------|

@@ -5,6 +5,7 @@ dist/
 
 # Firmware secrets & build output
 firmware/src/config.h
+firmware/src/sf_pro_fonts.h
 firmware/.pio/
 firmware/.vscode/
 

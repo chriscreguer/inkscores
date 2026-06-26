@@ -71,6 +71,7 @@ What it does:
 ```bash
 cd firmware
 cp src/config.example.h src/config.h   # then edit Wi-Fi + DASHBOARD_URL
+../tools/gen-sf-pro-fonts.sh            # optional: use SF Pro on the ePaper UI
 pio run                                 # build
 pio run --target upload                 # flash
 pio device monitor                      # serial logs
@@ -80,6 +81,8 @@ The firmware wakes, connects to Wi-Fi, fetches the dashboard JSON, renders the
 header + two team cards + two standings tables, then deep-sleeps for
 `refreshAfterSeconds`. Failed fetches fall back to the last cached dashboard, or
 an error screen, and retry sooner. See [`docs/layout.md`](./docs/layout.md).
+If `src/sf_pro_fonts.h` exists, the renderer uses those generated SF Pro bitmap
+fonts; otherwise it falls back to the built-in Adafruit GFX bitmap font.
 
 > The ePaper panel binding (`GxEPD2` class + SPI pins) in
 > `firmware/src/render_dashboard.cpp` is board-specific. Confirm it against

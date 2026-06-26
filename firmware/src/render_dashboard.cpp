@@ -5,6 +5,15 @@
 #include "dashboard_types.h"
 #include "logos.h"
 
+#if __has_include("sf_pro_fonts.h")
+// Locally generated from user-installed SF Pro fonts. This file is gitignored
+// because it contains font bitmap data from a licensed, user-supplied font.
+#include "sf_pro_fonts.h"
+#define INKSCORES_HAS_SF_PRO 1
+#else
+#define INKSCORES_HAS_SF_PRO 0
+#endif
+
 // ---------------------------------------------------------------------------
 // Panel binding (BOARD-SPECIFIC)
 //
@@ -52,12 +61,62 @@ uint16_t colorFor(Accent accent) {
   }
 }
 
+struct TextMetrics {
+  int w;
+  int h;
+};
+
+#if INKSCORES_HAS_SF_PRO
+const GFXfont* fontFor(uint8_t size) {
+  switch (size) {
+    case 1:
+      return &SFProTextRegular8pt7b;
+    case 3:
+      return &SFProDisplayRegular18pt7b;
+    case 2:
+    default:
+      return &SFProTextRegular12pt7b;
+  }
+}
+
+void applyFont(uint8_t size) {
+  display.setFont(fontFor(size));
+  display.setTextSize(1);
+}
+
+TextMetrics measureText(const String& text, uint8_t size) {
+  applyFont(size);
+  int16_t x1, y1;
+  uint16_t w, h;
+  display.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
+  return {(int)w, (int)h};
+}
+
 void drawText(int x, int y, const String& text, uint8_t size, uint16_t color) {
+  applyFont(size);
+  display.setTextColor(color);
+
+  // Custom GFX fonts position the cursor on the baseline. Keep the renderer's
+  // existing top-left text coordinates by offsetting with the measured bounds.
+  int16_t x1, y1;
+  uint16_t w, h;
+  display.getTextBounds(text, 0, 0, &x1, &y1, &w, &h);
+  display.setCursor(x - x1, y - y1);
+  display.print(text);
+}
+#else
+TextMetrics measureText(const String& text, uint8_t size) {
+  return {(int)text.length() * 6 * size, 8 * size};
+}
+
+void drawText(int x, int y, const String& text, uint8_t size, uint16_t color) {
+  display.setFont();
   display.setTextColor(color);
   display.setTextSize(size);
   display.setCursor(x, y);
   display.print(text);
 }
+#endif
 
 const char* str(const JsonObjectConst& obj, const char* key, const char* fallback) {
   return obj[key] | fallback;
@@ -69,16 +128,14 @@ const char* str(const JsonObjectConst& obj, const char* key, const char* fallbac
 // so the cards get the full height up top).
 void renderFooter(const String& footer) {
   using namespace layout;
-  const int charW = 6;  // size 1 default font advance
-  const int fx = kWidth - kMargin - (int)footer.length() * charW;
+  const int fx = kWidth - kMargin - measureText(footer, 1).w;
   drawText(fx < kMargin ? kMargin : fx, kHeight - kFooterHeight, footer, 1, GxEPD_BLACK);
 }
 
 // Draw a centred string of size `size` at pixel centre (cx, cy).
 void drawCentered(int cx, int cy, const String& text, uint8_t size, uint16_t color) {
-  const int tw = (int)text.length() * 6 * size;  // default GFX font is 6px wide
-  const int th = 8 * size;
-  drawText(cx - tw / 2, cy - th / 2, text, size, color);
+  const TextMetrics m = measureText(text, size);
+  drawText(cx - m.w / 2, cy - m.h / 2, text, size, color);
 }
 
 // Logo palette index -> GxEPD colour. MUST match PALETTE in tools/gen-logos.py.
