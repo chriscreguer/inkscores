@@ -876,38 +876,27 @@ function drawCalendar(ctx, x, y, color) {
 
 function nextGameParts(text) {
   const raw = String(text == null ? "—" : text).trim();
-  if (!raw || raw === "—") return { date: "—", detail: "" };
+  if (!raw || raw === "—") return { when: "—", matchup: "" };
 
-  const parts = raw.split(/\s+/);
-  const timeIdx = parts.findIndex((p) => /^\d{1,2}:\d{2}(?:\s*[AP]M)?$/i.test(p));
-  if (timeIdx >= 0) {
-    const date = parts.slice(0, timeIdx).join(" ") || "Today";
-    return {
-      date: date === "Yest." || date === "Yest" ? "Yesterday" : date,
-      detail: parts.slice(timeIdx).join(" "),
-    };
+  const m = raw.match(/\s(vs|@)\s+(.+)$/i);
+  if (!m) {
+    const when = raw === "Yest." || raw === "Yest" ? "Yesterday" : raw;
+    return { when, matchup: "" };
   }
 
-  if (/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/i.test(parts[0] || "") && /^\d{1,2}$/.test(parts[1] || "")) {
-    return { date: parts.slice(0, 2).join(" "), detail: parts.slice(2).join(" ") };
-  }
-
-  if (parts.length > 1) {
-    const date = parts[0] === "Yest." || parts[0] === "Yest" ? "Yesterday" : parts[0];
-    return { date, detail: parts.slice(1).join(" ") };
-  }
-
-  return { date: "Today", detail: raw };
+  let when = raw.slice(0, m.index).trim() || "Today";
+  if (when === "Yest." || when === "Yest") when = "Yesterday";
+  return { when, matchup: m[1] + " " + m[2] };
 }
 
 function calendarTextWidth(ctx, text, size, weight = "400") {
   const p = nextGameParts(text);
   const detailSize = Math.max(10, size - 2);
   ctx.font = "600 " + size + "px " + fam();
-  const dateW = ctx.measureText(p.date).width;
+  const whenW = ctx.measureText(p.when).width;
   ctx.font = weight + " " + detailSize + "px " + fam();
-  const detailW = p.detail ? ctx.measureText(p.detail).width : 0;
-  return 20 + Math.ceil(Math.max(dateW, detailW));
+  const matchupW = p.matchup ? ctx.measureText(p.matchup).width : 0;
+  return 20 + Math.ceil(Math.max(whenW, matchupW));
 }
 
 function drawCalendarText(ctx, text, x, textY, size, weight = "400", color = INK.black) {
@@ -915,9 +904,9 @@ function drawCalendarText(ctx, text, x, textY, size, weight = "400", color = INK
   const detailSize = Math.max(10, size - 2);
   const lineH = Math.ceil(size * 1.08);
   drawCalendar(ctx, x, textY - 2, color);
-  txt(ctx, p.date, x + 20, textY, size, "600", color);
-  if (p.detail) {
-    txt(ctx, p.detail, x + 20, textY + lineH, detailSize, weight, color);
+  txt(ctx, p.when, x + 20, textY, size, "600", color);
+  if (p.matchup) {
+    txt(ctx, p.matchup, x + 20, textY + lineH, detailSize, weight, color);
   }
 }
 

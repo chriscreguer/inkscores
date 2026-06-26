@@ -185,8 +185,8 @@ void renderLogo(const JsonObjectConst& s, int x, int y, uint16_t accent) {
 }
 
 struct NextGameParts {
-  String date;
-  String detail;
+  String when;
+  String matchup;
 };
 
 String normalizeDateLabel(String value) {
@@ -195,62 +195,27 @@ String normalizeDateLabel(String value) {
   return value;
 }
 
-bool isTimeToken(const String& token) {
-  return token.length() >= 3 && isDigit(token[0]) && token.indexOf(':') > 0;
-}
-
-bool isMonthToken(const String& token) {
-  return token == "Jan" || token == "Feb" || token == "Mar" || token == "Apr" ||
-         token == "May" || token == "Jun" || token == "Jul" || token == "Aug" ||
-         token == "Sep" || token == "Oct" || token == "Nov" || token == "Dec";
-}
-
-bool isNumericToken(const String& token) {
-  if (token.length() == 0) return false;
-  for (int i = 0; i < token.length(); i++) {
-    if (!isDigit(token[i])) return false;
-  }
-  return true;
-}
-
 NextGameParts splitNextGame(String raw) {
   raw.trim();
   if (raw.length() == 0 || raw == "-") return {"-", ""};
 
-  int start = 0;
-  while (start < raw.length()) {
-    int end = raw.indexOf(' ', start);
-    if (end < 0) end = raw.length();
-    const String token = raw.substring(start, end);
-    if (isTimeToken(token)) {
-      String date = raw.substring(0, start);
-      date.trim();
-      if (date.length() == 0) date = "Today";
-      String detail = raw.substring(start);
-      detail.trim();
-      return {normalizeDateLabel(date), detail};
-    }
-    start = end + 1;
-    while (start < raw.length() && raw[start] == ' ') start++;
+  const int vsAt = raw.indexOf(" vs ");
+  const int atAt = raw.indexOf(" @ ");
+  int splitAt = -1;
+  if (vsAt >= 0 && atAt >= 0) splitAt = min(vsAt, atAt);
+  else if (vsAt >= 0) splitAt = vsAt;
+  else if (atAt >= 0) splitAt = atAt;
+
+  if (splitAt < 0) {
+    return {normalizeDateLabel(raw), ""};
   }
 
-  const int firstSpace = raw.indexOf(' ');
-  if (firstSpace < 0) return {"Today", raw};
-
-  String first = raw.substring(0, firstSpace);
-  String rest = raw.substring(firstSpace + 1);
-  rest.trim();
-  const int secondSpace = rest.indexOf(' ');
-  if (isMonthToken(first) && secondSpace > 0) {
-    const String day = rest.substring(0, secondSpace);
-    if (isNumericToken(day)) {
-      String detail = rest.substring(secondSpace + 1);
-      detail.trim();
-      return {first + " " + day, detail};
-    }
-  }
-
-  return {normalizeDateLabel(first), rest};
+  String when = raw.substring(0, splitAt);
+  when.trim();
+  if (when.length() == 0) when = "Today";
+  String matchup = raw.substring(splitAt + 1);
+  matchup.trim();
+  return {normalizeDateLabel(when), matchup};
 }
 
 void drawCalendarIcon(int x, int y, uint16_t color) {
@@ -265,9 +230,9 @@ void drawCalendarIcon(int x, int y, uint16_t color) {
 void renderNextGame(const String& next, int x, int y, uint16_t color) {
   const NextGameParts parts = splitNextGame(next);
   drawCalendarIcon(x, y + 2, color);
-  drawText(x + 20, y, fitText(parts.date, 14), 2, color);
-  if (parts.detail.length() > 0) {
-    drawText(x + 20, y + 20, fitText(parts.detail, 24), 2, color);
+  drawText(x + 20, y, fitText(parts.when, 18), 2, color);
+  if (parts.matchup.length() > 0) {
+    drawText(x + 20, y + 20, fitText(parts.matchup, 24), 2, color);
   }
 }
 
