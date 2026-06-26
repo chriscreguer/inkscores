@@ -338,7 +338,9 @@ const HITTER_OPS_STD = 0.13;
 const PITCHER_ERA_MEAN = 4.0;
 const PITCHER_ERA_STD = 1.5;
 const MIN_HITTER_AB = 12; // enough recent at-bats to count as a regular
-const MIN_PITCHER_IP = 6; // enough recent innings to judge
+const MIN_PITCHER_IP = 12; // ~2+ starts over the wider pitcher window, not one
+const HITTER_WINDOW_DAYS = 10; // ~last 10 games
+const PITCHER_WINDOW_DAYS = 28; // ~5 starts, so one outing doesn't swing it
 const FORM_THRESHOLD = 0.2; // distance from average before we call it hot/cold
 const NAME_SUFFIXES = new Set(["jr", "jr.", "sr", "sr.", "ii", "iii", "iv"]);
 
@@ -539,13 +541,15 @@ export function createMlbStatsAdapter(deps?: MlbStatsDeps): MlbStatsAdapter {
         if (!entry) return { hot: [], cold: [] };
         const teamId = Number(entry[0]);
         const end = now();
-        // ~10 days ≈ the last 10 games. Longer windows drag in stale stretches
-        // and mislabel a player who's been fine lately as cold.
-        const start = new Date(end.getTime() - 10 * 24 * 60 * 60 * 1000);
+        const day = 24 * 60 * 60 * 1000;
+        // Hitters: ~last 10 games. Pitchers get a wider window because starters
+        // go every ~5 days — a short window is just one or two outings.
+        const hitStart = new Date(end.getTime() - HITTER_WINDOW_DAYS * day);
+        const pitStart = new Date(end.getTime() - PITCHER_WINDOW_DAYS * day);
         const yr = season();
         const [hitRaw, pitRaw] = await Promise.all([
-          fetchJson(dateRangeStatsUrl("hitting", teamId, start, end, yr)).catch(() => null),
-          fetchJson(dateRangeStatsUrl("pitching", teamId, start, end, yr)).catch(() => null),
+          fetchJson(dateRangeStatsUrl("hitting", teamId, hitStart, end, yr)).catch(() => null),
+          fetchJson(dateRangeStatsUrl("pitching", teamId, pitStart, end, yr)).catch(() => null),
         ]);
         const forms = [...parseHitterForms(hitRaw), ...parsePitcherForms(pitRaw)];
         const { hot, cold } = rankPlayerForms(forms);
