@@ -11,18 +11,18 @@ bool connectWifi() {
   const unsigned long timeoutMs = (unsigned long)WIFI_TIMEOUT_SECONDS * 1000UL;
   const unsigned long start = millis();
 
-  Serial.print("Connecting to Wi-Fi");
+  Serial0.print("Connecting to Wi-Fi");
   while (WiFi.status() != WL_CONNECTED) {
     if (millis() - start > timeoutMs) {
-      Serial.println(" timed out");
+      Serial0.println(" timed out");
       return false;
     }
     delay(250);
-    Serial.print(".");
+    Serial0.print(".");
   }
 
-  Serial.print(" connected, IP ");
-  Serial.println(WiFi.localIP());
+  Serial0.print(" connected, IP ");
+  Serial0.println(WiFi.localIP());
   return true;
 }
 

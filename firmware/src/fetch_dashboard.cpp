@@ -20,7 +20,7 @@ String httpsGet(const char* url) {
   http.setConnectTimeout(8000);
   http.setTimeout(8000);
   if (!http.begin(client, url)) {
-    Serial.println("http.begin failed");
+    Serial0.println("http.begin failed");
     return String();
   }
 
@@ -29,7 +29,7 @@ String httpsGet(const char* url) {
   if (code == HTTP_CODE_OK) {
     body = http.getString();
   } else {
-    Serial.printf("HTTP GET failed: %d\n", code);
+    Serial0.printf("HTTP GET failed: %d\n", code);
   }
   http.end();
   return body;
@@ -38,7 +38,7 @@ String httpsGet(const char* url) {
 void saveCache(const String& payload) {
   File f = LittleFS.open(kCachePath, FILE_WRITE);
   if (!f) {
-    Serial.println("Could not open cache for writing");
+    Serial0.println("Could not open cache for writing");
     return;
   }
   f.print(payload);
@@ -51,7 +51,7 @@ bool loadCache(JsonDocument& doc) {
   const DeserializationError err = deserializeJson(doc, f);
   f.close();
   if (err) {
-    Serial.printf("Cache parse error: %s\n", err.c_str());
+    Serial0.printf("Cache parse error: %s\n", err.c_str());
     return false;
   }
   return true;
@@ -60,7 +60,7 @@ bool loadCache(JsonDocument& doc) {
 
 FetchStatus fetchDashboard(JsonDocument& doc) {
   if (!LittleFS.begin(true)) {
-    Serial.println("LittleFS mount failed (continuing without cache)");
+    Serial0.println("LittleFS mount failed (continuing without cache)");
   }
 
   const String payload = httpsGet(DASHBOARD_URL);
@@ -70,7 +70,7 @@ FetchStatus fetchDashboard(JsonDocument& doc) {
       saveCache(payload);
       return FetchStatus::Fresh;
     }
-    Serial.printf("JSON parse error: %s\n", err.c_str());
+    Serial0.printf("JSON parse error: %s\n", err.c_str());
   }
 
   // Fetch or parse failed — fall back to the last good dashboard.

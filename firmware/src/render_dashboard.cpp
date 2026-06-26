@@ -1,6 +1,7 @@
 #include "render_dashboard.h"
 
 #include <GxEPD2_7C.h>
+#include <SPI.h>
 
 #include "dashboard_types.h"
 #include "logos.h"
@@ -25,6 +26,12 @@
 #ifndef EPD_CS
 #define EPD_CS 10
 #endif
+#ifndef EPD_SCK
+#define EPD_SCK 7
+#endif
+#ifndef EPD_MOSI
+#define EPD_MOSI 9
+#endif
 #ifndef EPD_DC
 #define EPD_DC 11
 #endif
@@ -35,11 +42,17 @@
 #define EPD_BUSY 13
 #endif
 
+SPIClass hspi(HSPI);
+
+#define MAX_DISPLAY_BUFFER_SIZE 16000u
+#define MAX_HEIGHT(EPD) \
+  (EPD::HEIGHT <= (MAX_DISPLAY_BUFFER_SIZE) / (EPD::WIDTH / 2) \
+       ? EPD::HEIGHT \
+       : (MAX_DISPLAY_BUFFER_SIZE) / (EPD::WIDTH / 2))
+
 // E Ink Spectra 6 (E6) 7.3" panel as shipped on the reTerminal E1002.
-// Inks: black, white, red, yellow, green, blue (no orange). Driven via the
-// GxEPD2_7C colour-capable base. Confirm the exact class against Seeed's
-// reTerminal E1002 ePaper example for your board revision.
-GxEPD2_7C<GxEPD2_730c_GDEP073E01, GxEPD2_730c_GDEP073E01::HEIGHT> display(
+// Inks: black, white, red, yellow, green, blue (no orange).
+GxEPD2_7C<GxEPD2_730c_GDEP073E01, MAX_HEIGHT(GxEPD2_730c_GDEP073E01)> display(
     GxEPD2_730c_GDEP073E01(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
 
 namespace {
@@ -373,7 +386,12 @@ void renderMessage(const JsonObjectConst& s, int x, int y, int w) {
 }  // namespace
 
 void initDisplay() {
-  display.init(115200);
+  pinMode(EPD_RST, OUTPUT);
+  pinMode(EPD_DC, OUTPUT);
+  pinMode(EPD_CS, OUTPUT);
+  hspi.begin(EPD_SCK, -1, EPD_MOSI, -1);
+  display.epd2.selectSPI(hspi, SPISettings(2000000, MSBFIRST, SPI_MODE0));
+  display.init(0);
   display.setRotation(0);  // 800x480 landscape
   display.setFullWindow();
 }
