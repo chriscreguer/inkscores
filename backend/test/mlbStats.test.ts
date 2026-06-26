@@ -229,12 +229,12 @@ describe("hot/cold from real stats", () => {
     expect(forms[1]!.score).toBeLessThan(0); // 7.50 ERA -> cold
   });
 
-  it("ranks hitters and pitchers together and tags pitcher chips", () => {
+  it("ranks hitters and pitchers together", () => {
     const forms = [...parseHitterForms(hitting), ...parsePitcherForms(pitching)];
     const { hot, cold } = rankPlayerForms(forms);
-    expect(hot.map(formChip)).toContain("Skubal(P)"); // 1.20 ERA tops the pool
+    expect(hot.map(formChip)).toContain("Skubal"); // 1.20 ERA tops the pool
     expect(hot.map(formChip)).toContain("Greene");
-    expect(cold.map(formChip)).toContain("Flaherty(P)");
+    expect(cold.map(formChip)).toContain("Flaherty");
     expect(cold.map(formChip)).toContain("Torkelson");
   });
 

@@ -397,15 +397,14 @@ export function rankPlayerForms(forms: PlayerForm[]): {
   return { hot, cold };
 }
 
-/** Render a player as a compact chip: short last name, pitchers tagged "(P)". */
+/** Render a player as a compact chip: short last name only. */
 export function formChip(form: PlayerForm): string {
   const parts = form.name.trim().split(/\s+/);
   let last = parts[parts.length - 1] ?? form.name;
   if (parts.length > 1 && NAME_SUFFIXES.has(last.toLowerCase())) {
     last = parts[parts.length - 2] ?? last;
   }
-  const base = shortenPlayerName(last);
-  return form.isPitcher ? `${base}(P)` : base;
+  return shortenPlayerName(last);
 }
 
 export async function fetchStatsJson(url: string, timeoutMs = 8000): Promise<Any> {
