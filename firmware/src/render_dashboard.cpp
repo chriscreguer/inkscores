@@ -184,6 +184,93 @@ void renderLogo(const JsonObjectConst& s, int x, int y, uint16_t accent) {
   }
 }
 
+struct NextGameParts {
+  String date;
+  String detail;
+};
+
+String normalizeDateLabel(String value) {
+  value.trim();
+  if (value == "Yest." || value == "Yest") return "Yesterday";
+  return value;
+}
+
+bool isTimeToken(const String& token) {
+  return token.length() >= 3 && isDigit(token[0]) && token.indexOf(':') > 0;
+}
+
+bool isMonthToken(const String& token) {
+  return token == "Jan" || token == "Feb" || token == "Mar" || token == "Apr" ||
+         token == "May" || token == "Jun" || token == "Jul" || token == "Aug" ||
+         token == "Sep" || token == "Oct" || token == "Nov" || token == "Dec";
+}
+
+bool isNumericToken(const String& token) {
+  if (token.length() == 0) return false;
+  for (int i = 0; i < token.length(); i++) {
+    if (!isDigit(token[i])) return false;
+  }
+  return true;
+}
+
+NextGameParts splitNextGame(String raw) {
+  raw.trim();
+  if (raw.length() == 0 || raw == "-") return {"-", ""};
+
+  int start = 0;
+  while (start < raw.length()) {
+    int end = raw.indexOf(' ', start);
+    if (end < 0) end = raw.length();
+    const String token = raw.substring(start, end);
+    if (isTimeToken(token)) {
+      String date = raw.substring(0, start);
+      date.trim();
+      if (date.length() == 0) date = "Today";
+      String detail = raw.substring(start);
+      detail.trim();
+      return {normalizeDateLabel(date), detail};
+    }
+    start = end + 1;
+    while (start < raw.length() && raw[start] == ' ') start++;
+  }
+
+  const int firstSpace = raw.indexOf(' ');
+  if (firstSpace < 0) return {"Today", raw};
+
+  String first = raw.substring(0, firstSpace);
+  String rest = raw.substring(firstSpace + 1);
+  rest.trim();
+  const int secondSpace = rest.indexOf(' ');
+  if (isMonthToken(first) && secondSpace > 0) {
+    const String day = rest.substring(0, secondSpace);
+    if (isNumericToken(day)) {
+      String detail = rest.substring(secondSpace + 1);
+      detail.trim();
+      return {first + " " + day, detail};
+    }
+  }
+
+  return {normalizeDateLabel(first), rest};
+}
+
+void drawCalendarIcon(int x, int y, uint16_t color) {
+  display.drawRect(x, y + 2, 14, 12, color);
+  display.fillRect(x + 1, y + 3, 13, 3, color);
+  display.fillRect(x + 3, y, 2, 4, color);
+  display.fillRect(x + 9, y, 2, 4, color);
+  display.fillRect(x + 3, y + 8, 2, 2, color);
+  display.fillRect(x + 7, y + 8, 2, 2, color);
+}
+
+void renderNextGame(const String& next, int x, int y, uint16_t color) {
+  const NextGameParts parts = splitNextGame(next);
+  drawCalendarIcon(x, y + 2, color);
+  drawText(x + 20, y, fitText(parts.date, 14), 2, color);
+  if (parts.detail.length() > 0) {
+    drawText(x + 20, y + 20, fitText(parts.detail, 24), 2, color);
+  }
+}
+
 // Draw one team card at the given top-left corner with the given width.
 void renderTeamCard(const JsonObjectConst& s, int x, int y, int w) {
   using namespace layout;
@@ -220,7 +307,7 @@ void renderTeamCard(const JsonObjectConst& s, int x, int y, int w) {
   } else {
     drawText(textX, y + 64, last, 2, GxEPD_BLACK);
   }
-  drawText(textX, y + 84, "Next: " + fitText(str(s, "next", "-"), 22), 2, GxEPD_BLACK);
+  renderNextGame(str(s, "next", "-"), textX, y + 90, GxEPD_BLACK);
   // Record + standing intentionally omitted from the card — it's in the
   // standings table below.
 }

@@ -92,6 +92,7 @@ const DEVICES = {
 let deviceKey = "e1002";
 try { deviceKey = localStorage.getItem("inkDevice") || "e1002"; } catch (e) {}
 const GAP = 12;
+const TOP_NOTE_GAP = 4;
 // These are recomputed per render by setLayout().
 let W = 800, H = 480, M = 16, CARD_H = 116, FOOT_H = 16, MAX_CARDS = 2;
 let COL_W = 0, LEFT = 0, RIGHT = 0;
@@ -172,7 +173,7 @@ function lastGamePlayedLabel(s) {
   const base = baseRaw ? new Date(baseRaw) : new Date();
   const diffDays = Math.round((dayStart(base).getTime() - dayStart(played).getTime()) / 86400000);
   if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yest.";
+  if (diffDays === 1) return "Yesterday";
   if (diffDays > 1 && diffDays < 7) {
     return new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(played);
   }
@@ -397,7 +398,7 @@ function drawCard(ctx, s, x, y) {
   drawResult(ctx, s.last, x + 12, y + 62, 16);
 
   // Next game: a calendar glyph instead of the word "Next:".
-  drawCalendarText(ctx, s.next == null ? "—" : s.next, x + 12, y + 88, 16);
+  drawCalendarText(ctx, s.next == null ? "—" : s.next, x + 12, y + 84, 16);
 }
 
 // "W 5-3 vs CLE" with the result letter coloured. Returns the total width.
@@ -525,7 +526,7 @@ function drawScorebugSummaryCard(ctx, s, x, y, variant) {
   const hcTop = y + h - 24;
   const startY = y + (variant === "scorebug" ? 70 : 62), lineH = 14;
   const topNext = variant === "scorebug" && s.next != null;
-  const nextReserve = !topNext && s.next != null ? 24 : 0;
+  const nextReserve = !topNext && s.next != null ? 34 : 0;
   const sumBottom = (hasHC ? hcTop - 8 : y + h - 6 - nextReserve) - 1;
   const maxLines = variant === "recommended"
     ? 2
@@ -544,7 +545,7 @@ function drawScorebugSummaryCard(ctx, s, x, y, variant) {
     const nextY = y + 25;
     drawCalendarText(ctx, String(s.next), startX, nextY, 13);
   } else if (s.next != null) {
-    const nextY = Math.min(sy + 10, y + h - 20);
+    const nextY = Math.min(sy + 10, y + h - 34);
     drawCalendarText(ctx, String(s.next), x + 12, nextY, 13);
   }
 
@@ -570,7 +571,7 @@ function drawTeamResultSummaryCard(ctx, s, x, y) {
   const fallback = [s.record, s.standing].filter((v) => v && v !== "—").join(" · ");
   const body = s.summary || fallback;
   const startY = y + 92, lineH = 14;
-  const nextReserve = s.next != null ? 28 : 0;
+  const nextReserve = s.next != null ? 36 : 0;
   const bottom = y + h - 8 - nextReserve;
   const maxLines = Math.max(2, Math.floor((bottom - startY) / lineH));
   const lines = wrapText(ctx, body, COL_W - 24, "400 13px " + fam());
@@ -581,7 +582,7 @@ function drawTeamResultSummaryCard(ctx, s, x, y) {
   });
 
   if (s.next != null) {
-    const nextY = Math.min(sy + 12, y + h - 21);
+    const nextY = Math.min(sy + 12, y + h - 34);
     drawCalendarText(ctx, String(s.next), x + pad, nextY, 13);
   }
 }
@@ -873,14 +874,51 @@ function drawCalendar(ctx, x, y, color) {
   ctx.fillRect(x + 7, y + 8, 2, 2);
 }
 
+function nextGameParts(text) {
+  const raw = String(text == null ? "—" : text).trim();
+  if (!raw || raw === "—") return { date: "—", detail: "" };
+
+  const parts = raw.split(/\s+/);
+  const timeIdx = parts.findIndex((p) => /^\d{1,2}:\d{2}(?:\s*[AP]M)?$/i.test(p));
+  if (timeIdx >= 0) {
+    const date = parts.slice(0, timeIdx).join(" ") || "Today";
+    return {
+      date: date === "Yest." || date === "Yest" ? "Yesterday" : date,
+      detail: parts.slice(timeIdx).join(" "),
+    };
+  }
+
+  if (/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/i.test(parts[0] || "") && /^\d{1,2}$/.test(parts[1] || "")) {
+    return { date: parts.slice(0, 2).join(" "), detail: parts.slice(2).join(" ") };
+  }
+
+  if (parts.length > 1) {
+    const date = parts[0] === "Yest." || parts[0] === "Yest" ? "Yesterday" : parts[0];
+    return { date, detail: parts.slice(1).join(" ") };
+  }
+
+  return { date: "Today", detail: raw };
+}
+
 function calendarTextWidth(ctx, text, size, weight = "400") {
-  ctx.font = weight + " " + size + "px " + fam();
-  return 20 + Math.ceil(ctx.measureText(String(text == null ? "—" : text)).width);
+  const p = nextGameParts(text);
+  const detailSize = Math.max(10, size - 2);
+  ctx.font = "600 " + size + "px " + fam();
+  const dateW = ctx.measureText(p.date).width;
+  ctx.font = weight + " " + detailSize + "px " + fam();
+  const detailW = p.detail ? ctx.measureText(p.detail).width : 0;
+  return 20 + Math.ceil(Math.max(dateW, detailW));
 }
 
 function drawCalendarText(ctx, text, x, textY, size, weight = "400", color = INK.black) {
+  const p = nextGameParts(text);
+  const detailSize = Math.max(10, size - 2);
+  const lineH = Math.ceil(size * 1.08);
   drawCalendar(ctx, x, textY - 2, color);
-  txt(ctx, text == null ? "—" : text, x + 20, textY, size, weight, color);
+  txt(ctx, p.date, x + 20, textY, size, "600", color);
+  if (p.detail) {
+    txt(ctx, p.detail, x + 20, textY + lineH, detailSize, weight, color);
+  }
 }
 
 function drawStandings(ctx, s, x, y) {
@@ -1038,7 +1076,7 @@ function render() {
     rowHeights[row] = Math.max(rowHeights[row] || 0, cardHFor(c));
   });
   const cardRowTop = (row) => {
-    let y = M;
+    let y = M + TOP_NOTE_GAP;
     for (let r = 0; r < row; r++) y += (rowHeights[r] || cardH()) + GAP;
     return y;
   };
@@ -1051,8 +1089,8 @@ function render() {
   const standTop = cardRowTop(cardRows);
 
   if (sideBySideMock) {
-    const leftStandTop = M + (cards[0] ? cardHFor(cards[0]) : cardH()) + GAP;
-    const rightStandTop = M + (cards[1] ? cardHFor(cards[1]) : cardH()) + GAP;
+    const leftStandTop = M + TOP_NOTE_GAP + (cards[0] ? cardHFor(cards[0]) : cardH()) + GAP;
+    const rightStandTop = M + TOP_NOTE_GAP + (cards[1] ? cardHFor(cards[1]) : cardH()) + GAP;
     let leftY = leftStandTop;
     allStand.filter((s) => /^al-/i.test(String(s.id || ""))).forEach((t, i) => {
       const h = drawStandings(ctx, t, LEFT, leftY);
@@ -1091,7 +1129,7 @@ function render() {
   }
   if (leaders) drawLeaders(ctx, leaders, M, bottom + 14, W - 2 * M);
 
-  if (msg && cards.length === 0) drawMessage(ctx, msg, M, M + 30, W - 2*M);
+  if (msg && cards.length === 0) drawMessage(ctx, msg, M, M + TOP_NOTE_GAP + 30, W - 2*M);
   else if (msg && divisions.length < 2 && !wildcards.length) drawMessage(ctx, msg, divisions.length === 0 ? LEFT : RIGHT, standTop, COL_W);
 
   // "Updated …" tucked into the top-right margin so the bottom is free for an
