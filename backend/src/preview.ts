@@ -757,16 +757,24 @@ function drawOuts(ctx, x, y, outs, color) {
   }
 }
 
-// Red/paper checkerboard pattern — dithers to a "light red" the panel can show.
-let _ditherRed = null;
-function ditherRed(ctx) {
-  if (_ditherRed) return _ditherRed;
-  const p = document.createElement("canvas"); p.width = 2; p.height = 2;
-  const c = p.getContext("2d");
-  c.fillStyle = "rgb(232,231,225)"; c.fillRect(0, 0, 2, 2);
-  c.fillStyle = "rgb(168,56,50)"; c.fillRect(0, 0, 1, 1); c.fillRect(1, 1, 1, 1);
-  _ditherRed = ctx.createPattern(p, "repeat");
-  return _ditherRed;
+// Fill a circle with a red/paper checkerboard so it reads as "light red" on a
+// panel with no light-red ink. Drawn as hard 1px (logical) cells rather than a
+// createPattern fill: a scaled pattern gets interpolated under RENDER_SCALE > 1,
+// and red/paper blends then quantize to yellow. Hard cells land on the
+// supersample grid and box back down to clean red/paper.
+function fillDitherCircle(ctx, cx, cy, r) {
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.clip();
+  const x0 = Math.floor(cx - r), y0 = Math.floor(cy - r);
+  const x1 = Math.ceil(cx + r), y1 = Math.ceil(cy + r);
+  ctx.fillStyle = INK.paper; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  ctx.fillStyle = INK.red;
+  for (let py = y0; py < y1; py++) {
+    for (let px = x0; px < x1; px++) {
+      if (((px + py) & 1) === 0) ctx.fillRect(px, py, 1, 1);
+    }
+  }
+  ctx.restore();
 }
 
 // Hot streak = small red flame.
@@ -842,8 +850,12 @@ function drawForm(ctx, x, y, form) {
   for (let i = 0; i < s.length && i < 10; i++) {
     const cx = x + r + i * gap;
     const win = s[i] === "W" || s[i] === "w";
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7);
-    ctx.fillStyle = win ? INK.green : ditherRed(ctx); ctx.fill();
+    if (win) {
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7);
+      ctx.fillStyle = INK.green; ctx.fill();
+    } else {
+      fillDitherCircle(ctx, cx, cy, r);
+    }
   }
 }
 
