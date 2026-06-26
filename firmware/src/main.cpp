@@ -3,6 +3,7 @@
 
 #include "config.h"
 #include "fetch_dashboard.h"
+#include "fetch_preview_image.h"
 #include "render_dashboard.h"
 #include "sleep.h"
 #include "network.h"
@@ -30,6 +31,23 @@ void setup() {
     deepSleepSeconds(ERROR_SLEEP_SECONDS);
     return;  // unreachable; deep sleep restarts the chip
   }
+
+  uint8_t* previewImage = nullptr;
+  size_t previewImageLength = 0;
+  uint32_t previewRefreshSeconds = DEFAULT_SLEEP_SECONDS;
+  Serial0.println("Fetching preview image");
+  if (fetchPreviewImage(previewImage, previewImageLength, previewRefreshSeconds) ==
+      PreviewImageStatus::Fresh) {
+    shutdownWifi();
+    Serial0.printf("Preview image bytes: %u\n", (unsigned)previewImageLength);
+    Serial0.println("Rendering preview image");
+    renderPreviewImage4bpp(previewImage, previewImageLength);
+    freePreviewImage(previewImage);
+    Serial0.println("Preview render complete");
+    deepSleepSeconds(previewRefreshSeconds);
+    return;
+  }
+  Serial0.println("Preview image unavailable, falling back to JSON");
 
   // ArduinoJson 7 elastic document; backend keeps the payload under ~16 KB.
   JsonDocument doc;

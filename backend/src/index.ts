@@ -11,6 +11,12 @@ import {
   type FeaturedServices,
 } from "./service.js";
 import { PREVIEW_HTML } from "./preview.js";
+import {
+  PREVIEW_IMAGE_HEIGHT,
+  PREVIEW_IMAGE_PACKED_BYTES,
+  PREVIEW_IMAGE_WIDTH,
+  renderPreviewImage4bpp,
+} from "./previewImage.js";
 import type { Dashboard } from "./types.js";
 import mlbMock from "./mock/dashboard.mlb.json" with { type: "json" };
 import mixedMock from "./mock/dashboard.mixed.json" with { type: "json" };
@@ -113,6 +119,29 @@ export function createApp(options: AppOptions = {}): Express {
     res.json(dashboard);
   });
 
+  app.get("/api/dashboard.4bpp", async (req: Request, res: Response) => {
+    const query = req.query as DashboardQuery;
+    const { dashboard, cacheControlSeconds } = await resolveDashboardResponse({
+      query,
+      adapters,
+      featured,
+      now: now(),
+      loadMock,
+    });
+
+    const image = await renderPreviewImage4bpp(dashboard);
+    res.set({
+      "Cache-Control": `public, max-age=${cacheControlSeconds}, stale-if-error=86400`,
+      "Content-Type": "application/octet-stream",
+      "Content-Length": String(PREVIEW_IMAGE_PACKED_BYTES),
+      "X-InkScores-Format": "4bpp-palette-v1",
+      "X-Width": String(PREVIEW_IMAGE_WIDTH),
+      "X-Height": String(PREVIEW_IMAGE_HEIGHT),
+      "X-Refresh-After-Seconds": String(dashboard.refreshAfterSeconds),
+    });
+    res.send(image);
+  });
+
   return app;
 }
 
@@ -131,5 +160,7 @@ if (isMain) {
     console.log(`            http://localhost:${port}/preview?debug=all`);
     // eslint-disable-next-line no-console
     console.log(`  JSON:     http://localhost:${port}/api/dashboard.json`);
+    // eslint-disable-next-line no-console
+    console.log(`  Image:    http://localhost:${port}/api/dashboard.4bpp`);
   });
 }

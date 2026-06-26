@@ -10,6 +10,10 @@
 // device. Use https:// in production.
 #define DASHBOARD_URL "https://your-domain.com/api/dashboard.json"
 
+// Optional: packed 4bpp preview image endpoint. If omitted in config.h, the
+// firmware defaults to the production InkScores endpoint.
+// #define DASHBOARD_IMAGE_URL "https://your-domain.com/api/dashboard.4bpp"
+
 // Fallback sleep interval (seconds) if the backend does not provide
 // refreshAfterSeconds. 7200 = 2 hours.
 #define DEFAULT_SLEEP_SECONDS 7200

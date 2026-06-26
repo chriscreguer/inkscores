@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.1",
     "express": "^4.19.2",
     "tsx": "^4.16.0"
   },

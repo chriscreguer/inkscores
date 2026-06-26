@@ -135,6 +135,8 @@ const char* str(const JsonObjectConst& obj, const char* key, const char* fallbac
   return obj[key] | fallback;
 }
 
+void renderNextGame(const String& next, int x, int y, uint16_t color);
+
 // --- Section renderers ---------------------------------------------------
 
 // Small footer line at the bottom of the panel (no header band/title/rule,
@@ -194,6 +196,209 @@ void renderLogo(const JsonObjectConst& s, int x, int y, uint16_t accent) {
     blitLogo(lg, x, y);
   } else {
     renderBadge(s, x + LOGO_SIZE / 2, y + LOGO_SIZE / 2, accent);
+  }
+}
+
+String teamAbbrFor(const JsonObjectConst& s) {
+  String abbr = str(s, "teamAbbr", "");
+  if (abbr.length() == 0) abbr = str(s, "badge", "");
+  if (abbr.length() == 0) abbr = fitText(str(s, "title", "?"), 3);
+  abbr.toUpperCase();
+  return abbr;
+}
+
+void renderOpponentMark(const String& abbr, int x, int y, int size) {
+  display.drawRect(x, y, size, size, GxEPD_BLACK);
+  String label = fitText(abbr.length() ? abbr : String("?"), 4);
+  label.toUpperCase();
+  drawCentered(x + size / 2, y + size / 2, label, 2, GxEPD_BLACK);
+}
+
+void renderTeamOrOpponentMark(
+    const JsonObjectConst& s,
+    const String& opponent,
+    bool team,
+    int x,
+    int y,
+    uint16_t accent) {
+  if (team) {
+    renderLogo(s, x, y, accent);
+  } else {
+    renderOpponentMark(opponent, x, y, LOGO_SIZE);
+  }
+}
+
+struct ScorebugParts {
+  bool ok;
+  String opponent;
+  String leftScore;
+  String rightScore;
+  bool leftTeam;
+};
+
+ScorebugParts parseLastScorebug(const String& raw) {
+  String value = raw;
+  value.trim();
+  const int firstSpace = value.indexOf(' ');
+  if (firstSpace < 0 || firstSpace + 1 >= value.length()) return {false, "", "-", "-", true};
+
+  const int scoreEnd = value.indexOf(' ', firstSpace + 1);
+  if (scoreEnd < 0) return {false, "", "-", "-", true};
+
+  String score = value.substring(firstSpace + 1, scoreEnd);
+  const int dash = score.indexOf('-');
+  if (dash < 0) return {false, "", "-", "-", true};
+
+  String us = score.substring(0, dash);
+  String them = score.substring(dash + 1);
+  us.trim();
+  them.trim();
+
+  String rest = value.substring(scoreEnd + 1);
+  rest.trim();
+  const bool watchedHome = rest.startsWith("vs ");
+  const bool watchedAway = rest.startsWith("@ ");
+  if (!watchedHome && !watchedAway) return {false, "", us, them, true};
+
+  String opponent = rest.substring(watchedHome ? 3 : 2);
+  opponent.trim();
+  opponent.toUpperCase();
+  return {
+      true,
+      opponent,
+      watchedHome ? them : us,
+      watchedHome ? us : them,
+      !watchedHome,
+  };
+}
+
+String scoreWithSpaces(const String& raw) {
+  String score = raw;
+  score.trim();
+  const int dash = score.indexOf('-');
+  if (dash < 0) return score.length() ? score : String("-");
+  String left = score.substring(0, dash);
+  String right = score.substring(dash + 1);
+  left.trim();
+  right.trim();
+  return left + " - " + right;
+}
+
+void drawSummaryLines(const String& raw, int x, int y, int maxChars, int maxLines) {
+  String remaining = raw;
+  remaining.trim();
+  if (remaining.length() == 0) return;
+
+  for (int line = 0; line < maxLines && remaining.length() > 0; line++) {
+    if ((int)remaining.length() <= maxChars) {
+      drawText(x, y + line * 16, remaining, 1, GxEPD_BLACK);
+      return;
+    }
+
+    int split = -1;
+    for (int i = maxChars; i > maxChars / 2; i--) {
+      if (remaining[i] == ' ') {
+        split = i;
+        break;
+      }
+    }
+    if (split < 0) split = maxChars;
+
+    String lineText = remaining.substring(0, split);
+    lineText.trim();
+    if (line == maxLines - 1) {
+      drawText(x, y + line * 16, fitText(remaining, maxChars), 1, GxEPD_BLACK);
+      return;
+    }
+    drawText(x, y + line * 16, lineText, 1, GxEPD_BLACK);
+    remaining = remaining.substring(split);
+    remaining.trim();
+  }
+}
+
+int drawFinalScorebug(const JsonObjectConst& s, int x, int y, uint16_t accent) {
+  ScorebugParts parts = parseLastScorebug(str(s, "last", "-"));
+  if (!parts.ok) {
+    parts.opponent = str(s, "scorebugOpponent", "");
+    parts.opponent.toUpperCase();
+  }
+  if (parts.opponent.length() == 0) {
+    parts.opponent = str(s, "scorebugOpponent", "");
+    parts.opponent.toUpperCase();
+  }
+
+  const int gap = 9;
+  const int logoY = y + 10;
+  const int leftX = x + 12;
+  const String score = parts.leftScore + " - " + parts.rightScore;
+  const int scoreW = measureText(score, 3).w;
+  const int scoreX = leftX + LOGO_SIZE + gap;
+  const int rightX = scoreX + scoreW + gap;
+
+  renderTeamOrOpponentMark(s, parts.opponent, parts.leftTeam, leftX, logoY, accent);
+  drawText(scoreX, logoY + 8, score, 3, GxEPD_BLACK);
+  renderTeamOrOpponentMark(s, parts.opponent, !parts.leftTeam, rightX, logoY, accent);
+  return rightX + LOGO_SIZE;
+}
+
+void renderScorebugCard(const JsonObjectConst& s, int x, int y, int w, uint16_t accent) {
+  const int scorebugEnd = drawFinalScorebug(s, x, y, accent);
+  drawText(scorebugEnd + 12, y + 18, "FINAL", 1, GxEPD_BLACK);
+
+  const char* summary = s["summary"] | "";
+  String body = summary;
+  if (body.length() == 0) {
+    body = String(str(s, "record", "")) + " " + str(s, "standing", "");
+    body.trim();
+  }
+  drawSummaryLines(body, x + 12, y + 72, 58, 2);
+
+  if (!s["next"].isNull()) {
+    renderNextGame(str(s, "next", "-"), x + w - 146, y + 18, GxEPD_BLACK);
+  }
+}
+
+void renderLiveScorebugCard(const JsonObjectConst& s, int x, int y, int w, uint16_t accent) {
+  JsonObjectConst live = s["live"].as<JsonObjectConst>();
+  if (live.isNull()) return;
+
+  String opponent = live["opponent"] | str(s, "scorebugOpponent", "");
+  opponent.toUpperCase();
+  const bool watchedHome = strcmp(live["homeAway"] | "home", "away") != 0;
+
+  String rawScore = live["score"] | "-";
+  String leftScore = rawScore;
+  String rightScore = "";
+  const int dash = rawScore.indexOf('-');
+  if (dash >= 0) {
+    String us = rawScore.substring(0, dash);
+    String them = rawScore.substring(dash + 1);
+    us.trim();
+    them.trim();
+    leftScore = watchedHome ? them : us;
+    rightScore = watchedHome ? us : them;
+  }
+
+  const int gap = 9;
+  const int logoY = y + 10;
+  const int leftX = x + 12;
+  const String score = rightScore.length() ? (leftScore + " - " + rightScore) : scoreWithSpaces(rawScore);
+  const int scoreW = measureText(score, 3).w;
+  const int scoreX = leftX + LOGO_SIZE + gap;
+  const int rightX = scoreX + scoreW + gap;
+
+  renderTeamOrOpponentMark(s, opponent, !watchedHome, leftX, logoY, accent);
+  drawText(scoreX, logoY + 8, score, 3, GxEPD_BLACK);
+  renderTeamOrOpponentMark(s, opponent, watchedHome, rightX, logoY, accent);
+
+  const int bw = 52, bh = 20, bx = x + w - bw - 8, by = y + 8;
+  display.fillRect(bx, by, bw, bh, GxEPD_RED);
+  drawText(bx + 6, by + 3, "LIVE", 2, GxEPD_WHITE);
+
+  drawText(x + 12, y + 70, fitText(live["detail"] | "Live", 34), 2, GxEPD_BLACK);
+  JsonArrayConst topPlayers = live["topPlayers"].as<JsonArrayConst>();
+  if (!topPlayers.isNull() && topPlayers.size() > 0) {
+    drawText(x + 12, y + 98, fitText(topPlayers[0] | "", 44), 1, GxEPD_BLACK);
   }
 }
 
@@ -258,8 +463,19 @@ void renderTeamCard(const JsonObjectConst& s, int x, int y, int w) {
   const uint16_t accent = colorFor(accentFromString(s["accent"] | "gray"));
   const int pad = 12;
   const bool live = strcmp(s["status"] | "active", "live") == 0;
+  const String cardVariant = str(s, "cardVariant", "");
 
   display.drawRect(x, y, w, h, GxEPD_BLACK);
+
+  if (live && !s["live"].isNull()) {
+    renderLiveScorebugCard(s, x, y, w, accent);
+    return;
+  }
+
+  if (cardVariant == "scorebug" || cardVariant == "recommended") {
+    renderScorebugCard(s, x, y, w, accent);
+    return;
+  }
 
   // Real team logo top-left, team name to its right (black; logo carries colour).
   renderLogo(s, x + pad, y + pad, accent);
@@ -449,6 +665,32 @@ void renderDashboard(const JsonDocument& doc, FetchStatus status) {
     }
 
     renderFooter(footer);
+  } while (display.nextPage());
+
+  display.hibernate();
+}
+
+void renderPreviewImage4bpp(const uint8_t* data, size_t length) {
+  using namespace layout;
+  constexpr size_t kExpectedLength = kWidth * kHeight / 2;
+  if (data == nullptr || length != kExpectedLength) {
+    renderError("Bad preview image");
+    return;
+  }
+
+  display.setFullWindow();
+  display.firstPage();
+  do {
+    for (int y = 0; y < kHeight; y++) {
+      const size_t row = (size_t)y * (kWidth / 2);
+      for (int bx = 0; bx < kWidth / 2; bx++) {
+        const uint8_t packed = data[row + bx];
+        const uint8_t left = packed >> 4;
+        const uint8_t right = packed & 0x0F;
+        display.drawPixel(bx * 2, y, left < 6 ? LOGO_PALETTE[left] : GxEPD_WHITE);
+        display.drawPixel(bx * 2 + 1, y, right < 6 ? LOGO_PALETTE[right] : GxEPD_WHITE);
+      }
+    }
   } while (display.nextPage());
 
   display.hibernate();
