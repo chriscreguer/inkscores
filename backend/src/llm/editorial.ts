@@ -110,10 +110,28 @@ export function fileStore(path: string): EditorialStore {
   };
 }
 
+/** Format a game's ISO date as a CT calendar date for prompt grounding. */
+function formatGameDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    timeZone: "America/Chicago",
+  }).format(d);
+}
+
 function recapPrompt(ctx: EditorialContext): string {
-  const grounding = ctx.lastGameLine
-    ? ` For context their most recent game finished ${ctx.lastGameLine}, but treat that as already known — do not restate it.`
-    : "";
+  let grounding = "";
+  if (ctx.lastGameLine) {
+    const when = ctx.lastFinalKey ? ` on ${formatGameDate(ctx.lastFinalKey)}` : "";
+    grounding =
+      ` Their most recent game is the one that finished ${ctx.lastGameLine}${when} — ` +
+      `this is authoritative. Before writing, confirm that any result, player, or ` +
+      `storyline you reference is from THAT exact game (matching opponent and date) ` +
+      `and not an earlier game. Treat the result itself as already known — do not ` +
+      `restate it.`;
+  }
   return (
     `In ${MAX_SUMMARY_LEN} characters or fewer, give most relevant talking ` +
     `points about the ${ctx.teamName} after their most recent game. Be as ` +
