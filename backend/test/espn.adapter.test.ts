@@ -58,6 +58,57 @@ describe("createEspnAdapter.getTeamSummary", () => {
     expect(summary.standing).toBeUndefined();
   });
 
+  it("detects live from the scoreboard when the cached schedule lags first pitch", async () => {
+    // Schedule still says the game is upcoming (cached before first pitch)...
+    const staleSchedule = {
+      events: [
+        {
+          date: "2026-06-20T17:00:00Z",
+          competitions: [
+            {
+              status: { type: { state: "pre", completed: false } },
+              competitors: [
+                { homeAway: "home", team: { abbreviation: "DET" } },
+                { homeAway: "away", team: { abbreviation: "MIN" } },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    // ...but the scoreboard shows it in progress.
+    const liveScoreboard = {
+      events: [
+        {
+          id: "777",
+          competitions: [
+            {
+              status: { type: { state: "in" } },
+              status_detail: "Top 3rd",
+              situation: { outs: 1 },
+              competitors: [
+                { homeAway: "home", team: { abbreviation: "DET" }, score: "4" },
+                { homeAway: "away", team: { abbreviation: "MIN" }, score: "2" },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const fetchJson = vi.fn(async (url: string) => {
+      if (url.includes("/schedule")) return staleSchedule;
+      if (url.includes("/scoreboard")) return liveScoreboard;
+      if (url.includes("/summary")) return {};
+      return standings;
+    });
+    const adapter = adapterWith(fetchJson);
+
+    const summary = await adapter.getTeamSummary(tigers);
+    expect(summary.isLive).toBe(true);
+    expect(summary.hasGameToday).toBe(true);
+    expect(summary.live).toMatchObject({ score: "4-2", opponent: "MIN" });
+  });
+
   it("caches upstream calls across two summary fetches", async () => {
     const fetchJson = vi.fn(async (url: string) =>
       url.includes("/schedule") ? schedule : standings,
@@ -67,8 +118,8 @@ describe("createEspnAdapter.getTeamSummary", () => {
     await adapter.getTeamSummary(tigers);
     await adapter.getTeamSummary(tigers);
 
-    // 1 schedule + 1 standings, reused on the second call.
-    expect(fetchJson).toHaveBeenCalledTimes(2);
+    // 1 schedule + 1 scoreboard + 1 standings, all reused on the second call.
+    expect(fetchJson).toHaveBeenCalledTimes(3);
   });
 });
 

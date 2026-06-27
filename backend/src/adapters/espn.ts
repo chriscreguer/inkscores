@@ -553,35 +553,41 @@ export function createEspnAdapter(config: EspnAdapterConfig): EspnAdapter {
     );
     const games = normalizeScheduleToGames(schedule, abbr, now(), timeZone);
 
+    // The team schedule is cached for up to 30 minutes, so it lags first pitch:
+    // a game can be underway while the cached copy still says "pre". The
+    // scoreboard (60s TTL, one shared fetch for all teams) is the real-time
+    // source of truth for in-progress games, so consult it to detect live —
+    // otherwise a game wouldn't show as live until the schedule cache expires.
+    let sbDetails: LiveDetails = {};
+    try {
+      const sb = await cache.getOrLoad(
+        `scoreboard:${config.sport}`,
+        CACHE_TTLS.liveGame,
+        () => fetchJson(scoreboardUrl(config.sport)),
+      );
+      sbDetails = liveDetailsFromScoreboard(sb, abbr);
+    } catch {
+      // scoreboard is best-effort; fall back to the schedule-derived state
+    }
+
+    const isLive = games.isLive || Boolean(sbDetails.live);
+
     const summary: TeamSummary = {
       teamKey: team.key,
       label: team.label,
       sport: team.sport,
-      isLive: games.isLive,
-      hasGameToday: games.hasGameToday,
+      isLive,
+      hasGameToday: games.hasGameToday || isLive,
       hasPlayoffContext: games.hasPlayoffContext,
     };
     if (games.lastGame) summary.lastGame = games.lastGame;
     if (games.nextGame) summary.nextGame = games.nextGame;
-    // Live game: the schedule only has the inning, so pull the full score +
-    // situation from the scoreboard (short-cached, only fetched while live).
-    if (games.isLive) {
-      let live = games.live;
-      let eventId = games.liveEventId;
-      let topPlayers: string[] | undefined;
-      try {
-        const sb = await cache.getOrLoad(
-          `scoreboard:${config.sport}`,
-          CACHE_TTLS.liveGame,
-          () => fetchJson(scoreboardUrl(config.sport)),
-        );
-        const details = liveDetailsFromScoreboard(sb, abbr);
-        if (details.live) live = details.live;
-        if (details.eventId) eventId = details.eventId;
-        if (details.topPlayers) topPlayers = details.topPlayers;
-      } catch {
-        // fall back to the schedule-derived live (inning only)
-      }
+    if (isLive) {
+      // Prefer the scoreboard's full score + situation (already fetched above);
+      // the schedule only carries the inning.
+      let live = sbDetails.live ?? games.live;
+      let eventId = sbDetails.eventId ?? games.liveEventId;
+      let topPlayers: string[] | undefined = sbDetails.topPlayers;
       // Win probability lives only in the per-game summary (short-cached).
       if (eventId) {
         try {
