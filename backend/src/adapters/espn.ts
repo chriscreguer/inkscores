@@ -253,6 +253,19 @@ export interface LiveDetails {
   topPlayers?: string[];
 }
 
+/** The team's event in a scoreboard payload regardless of state (pre/in/post),
+ * or undefined if the team has no game on today's slate. Lets callers read the
+ * real-time game state instead of trusting the longer-cached team schedule. */
+export function findTeamEventInScoreboard(raw: Any, teamAbbr: string): Any | undefined {
+  for (const ev of raw?.events ?? []) {
+    const comp = ev.competitions?.[0];
+    if ((comp?.competitors ?? []).some((c: Any) => c.team?.abbreviation === teamAbbr)) {
+      return ev;
+    }
+  }
+  return undefined;
+}
+
 /** Find the team's in-progress game in a scoreboard payload and extract the
  * full live situation, the event id (for a summary fetch), and top players. */
 export function liveDetailsFromScoreboard(raw: Any, teamAbbr: string): LiveDetails {
@@ -553,35 +566,56 @@ export function createEspnAdapter(config: EspnAdapterConfig): EspnAdapter {
     );
     const games = normalizeScheduleToGames(schedule, abbr, now(), timeZone);
 
-    // The team schedule is cached for up to 30 minutes, so it lags first pitch:
-    // a game can be underway while the cached copy still says "pre". The
-    // scoreboard (60s TTL, one shared fetch for all teams) is the real-time
-    // source of truth for in-progress games, so consult it to detect live —
-    // otherwise a game wouldn't show as live until the schedule cache expires.
-    let sbDetails: LiveDetails = {};
+    // The team schedule is cached for up to 30 minutes, so it lags both first
+    // pitch and the final out: a game can be underway (or already over) while
+    // the cached copy still says "pre" / "in". The scoreboard (60s TTL, one
+    // shared fetch for all teams) is the real-time source of truth, so let it
+    // decide whether the game is live or finished.
+    let sb: Any;
     try {
-      const sb = await cache.getOrLoad(
+      sb = await cache.getOrLoad(
         `scoreboard:${config.sport}`,
         CACHE_TTLS.liveGame,
         () => fetchJson(scoreboardUrl(config.sport)),
       );
-      sbDetails = liveDetailsFromScoreboard(sb, abbr);
     } catch {
       // scoreboard is best-effort; fall back to the schedule-derived state
     }
+    const sbEvent = sb ? findTeamEventInScoreboard(sb, abbr) : undefined;
+    const sbState = sbEvent?.competitions?.[0]?.status?.type?.state as
+      | string
+      | undefined;
+    const sbDetails: LiveDetails = sb ? liveDetailsFromScoreboard(sb, abbr) : {};
 
-    const isLive = games.isLive || Boolean(sbDetails.live);
+    // Live only when the scoreboard says "in". If the scoreboard knows the game
+    // but it's final, trust that over the stale schedule — otherwise a finished
+    // game lingers as a phantom "Top 9th" with no score. Fall back to the
+    // schedule only when the scoreboard has no entry for this team today.
+    const isLive = sbState === "in" || (sbState === undefined && games.isLive);
 
     const summary: TeamSummary = {
       teamKey: team.key,
       label: team.label,
       sport: team.sport,
       isLive,
-      hasGameToday: games.hasGameToday || isLive,
+      hasGameToday: games.hasGameToday || sbState !== undefined,
       hasPlayoffContext: games.hasPlayoffContext,
     };
-    if (games.lastGame) summary.lastGame = games.lastGame;
-    if (games.nextGame) summary.nextGame = games.nextGame;
+
+    // Prefer a just-finished game the scoreboard already shows as final but the
+    // still-cached schedule hasn't recorded yet, and stop that same game from
+    // masquerading as the upcoming game.
+    let lastGame = games.lastGame;
+    let nextGame = games.nextGame;
+    if (sbState === "post" && sbEvent) {
+      const finished = gameFrom(sbEvent, abbr, now(), timeZone);
+      if (finished?.score) {
+        lastGame = finished;
+        if (nextGame && nextGame.date === finished.date) nextGame = undefined;
+      }
+    }
+    if (lastGame) summary.lastGame = lastGame;
+    if (nextGame) summary.nextGame = nextGame;
     if (isLive) {
       // Prefer the scoreboard's full score + situation (already fetched above);
       // the schedule only carries the inning.

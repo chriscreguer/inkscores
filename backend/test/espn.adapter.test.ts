@@ -109,6 +109,58 @@ describe("createEspnAdapter.getTeamSummary", () => {
     expect(summary.live).toMatchObject({ score: "4-2", opponent: "MIN" });
   });
 
+  it("treats a finished game as over via the scoreboard, even when the cached schedule still says live", async () => {
+    // Schedule cache is stale: it still shows the game in progress ("Top 9th").
+    const staleSchedule = {
+      events: [
+        {
+          date: "2026-06-20T17:00:00Z",
+          competitions: [
+            {
+              status: { type: { state: "in", completed: false } },
+              status_detail: "Top 9th",
+              competitors: [
+                { homeAway: "home", team: { abbreviation: "DET" } },
+                { homeAway: "away", team: { abbreviation: "MIN" } },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    // The scoreboard already shows it final.
+    const finalScoreboard = {
+      events: [
+        {
+          id: "888",
+          date: "2026-06-20T17:00:00Z",
+          competitions: [
+            {
+              status: { type: { state: "post", completed: true, shortDetail: "Final" } },
+              competitors: [
+                { homeAway: "home", team: { abbreviation: "DET" }, score: "6", winner: true },
+                { homeAway: "away", team: { abbreviation: "MIN" }, score: "3", winner: false },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const fetchJson = vi.fn(async (url: string) => {
+      if (url.includes("/schedule")) return staleSchedule;
+      if (url.includes("/scoreboard")) return finalScoreboard;
+      return standings;
+    });
+    const adapter = adapterWith(fetchJson);
+
+    const summary = await adapter.getTeamSummary(tigers);
+    expect(summary.isLive).toBe(false);
+    expect(summary.live).toBeUndefined();
+    // surfaces the final score, and the ended game doesn't masquerade as "next"
+    expect(summary.lastGame).toMatchObject({ result: "W", score: "6-3", opponent: "MIN" });
+    expect(summary.nextGame).toBeUndefined();
+  });
+
   it("caches upstream calls across two summary fetches", async () => {
     const fetchJson = vi.fn(async (url: string) =>
       url.includes("/schedule") ? schedule : standings,
