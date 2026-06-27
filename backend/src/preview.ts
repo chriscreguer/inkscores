@@ -834,8 +834,13 @@ function drawHotCold(ctx, x, hy, s) {
   const minCold = Math.round(innerW * 0.34);
   const maxHotW = Math.max(24, innerW - minCold - SNOW_GAP - SNOW_TEXT);
 
+  // The landscape card lists just the names; the parenthetical stat (e.g.
+  // "Dingler (.990)") is kept only for the roomier portrait view.
+  const namesOnly = (list) =>
+    (list || []).map((p) => String(p).replace(/\s*\(.*\)\s*$/, "")).join(", ") || "—";
+
   drawFlame(ctx, x + 18, hy + 8, 14, INK.red);
-  const hotText = fitWidth(ctx, (s.hot || []).join(", ") || "—", maxHotW, font);
+  const hotText = fitWidth(ctx, namesOnly(s.hot), maxHotW, font);
   txt(ctx, hotText, hotTextX, hy + 3, 12, "400", INK.black);
 
   ctx.font = font;
@@ -843,7 +848,7 @@ function drawHotCold(ctx, x, hy, s) {
   const snowX = hotTextX + hotW + SNOW_GAP;
   drawSnowflake(ctx, snowX, hy + 8, 14, INK.blue);
   const coldTextX = snowX + SNOW_TEXT;
-  txt(ctx, fitWidth(ctx, (s.cold || []).join(", ") || "—", rightEdge - coldTextX, font), coldTextX, hy + 3, 12, "400", INK.black);
+  txt(ctx, fitWidth(ctx, namesOnly(s.cold), rightEdge - coldTextX, font), coldTextX, hy + 3, 12, "400", INK.black);
 }
 
 // Recent-form dots (up to 10): win = solid green, loss = dithered light-red.
