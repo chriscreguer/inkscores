@@ -9,23 +9,38 @@
 #include "sleep.h"
 #include "network.h"
 
-#ifndef VIEW_BUTTON_PIN
-#define VIEW_BUTTON_PIN 3
+// Three front buttons (Seeed reTerminal E1002, all active-low):
+//   GPIO3 green       -> refresh the current view (no mode change)
+//   GPIO5 left white  -> force landscape (view 1)
+//   GPIO4 right white -> force portrait  (view 2)
+#ifndef REFRESH_BUTTON_PIN
+#define REFRESH_BUTTON_PIN 3
 #endif
-#ifndef VIEW_BUTTON_ACTIVE_LOW
-#define VIEW_BUTTON_ACTIVE_LOW 1
+#ifndef LANDSCAPE_BUTTON_PIN
+#define LANDSCAPE_BUTTON_PIN 5
+#endif
+#ifndef PORTRAIT_BUTTON_PIN
+#define PORTRAIT_BUTTON_PIN 4
 #endif
 
 RTC_DATA_ATTR bool portraitMode = false;
 
-void initViewModeButton() {
-  pinMode(VIEW_BUTTON_PIN, VIEW_BUTTON_ACTIVE_LOW ? INPUT_PULLUP : INPUT_PULLDOWN);
-  delay(10);
-  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0) {
-    portraitMode = !portraitMode;
-    Serial0.printf("View button wake: %s mode\n", portraitMode ? "portrait" : "landscape");
+void initButtons() {
+  // Every wake re-fetches and re-renders; the buttons only pick the view. EXT1
+  // wakes on any of the three pins, and the status bitmask says which one.
+  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT1) {
+    const uint64_t status = esp_sleep_get_ext1_wakeup_status();
+    if (status & (1ULL << PORTRAIT_BUTTON_PIN)) {
+      portraitMode = true;
+      Serial0.println("Portrait button: view 2 (portrait)");
+    } else if (status & (1ULL << LANDSCAPE_BUTTON_PIN)) {
+      portraitMode = false;
+      Serial0.println("Landscape button: view 1 (landscape)");
+    } else if (status & (1ULL << REFRESH_BUTTON_PIN)) {
+      Serial0.printf("Refresh button: redraw %s\n", portraitMode ? "portrait" : "landscape");
+    }
   } else {
-    Serial0.printf("Current view mode: %s\n", portraitMode ? "portrait" : "landscape");
+    Serial0.printf("Timer wake: %s mode\n", portraitMode ? "portrait" : "landscape");
   }
 }
 
@@ -35,7 +50,7 @@ void setup() {
   Serial0.begin(115200);
   delay(100);
   Serial0.println("\nInkScores waking up");
-  initViewModeButton();
+  initButtons();
 
   Serial0.println("Initializing display");
   initDisplay();
