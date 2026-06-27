@@ -193,6 +193,60 @@ export function topPlayersFromCompetition(comp: Any, teamAbbr: string, max = 4):
   return lines;
 }
 
+/** Top performers for the watched team from a live game's box score (in the
+ * per-game summary payload we already fetch for win probability). The scoreboard
+ * leaders used by topPlayersFromCompetition only expose ~3 distinct category
+ * slots, so when one player is having a big game he tops them all and collapses
+ * to a single line. The box score has every player, so rank the hitters by game
+ * impact and append the most-used pitcher's line. Returns [] if no box score. */
+export function topPlayersFromSummary(raw: Any, teamAbbr: string, max = 4): string[] {
+  const teams: Any[] = raw?.boxscore?.players ?? [];
+  const group = teams.find((t) => t.team?.abbreviation === teamAbbr);
+  if (!group) return [];
+  const stats: Any[] = group.statistics ?? [];
+  const batting = stats.find((g: Any) => g.type === "batting");
+  const pitching = stats.find((g: Any) => g.type === "pitching");
+
+  // ESPN shortName is "F. Lastname"; drop the leading initial for the card.
+  const lastName = (n: Any) => String(n ?? "").replace(/^[A-Za-z]\.\s+/, "");
+
+  // Rank hitters by a simple game-impact score; drop anyone who did nothing.
+  const hitters = (batting?.athletes ?? [])
+    .map((a: Any) => {
+      const at = (key: string) => a.stats?.[batting.keys.indexOf(key)];
+      const num = (key: string) => Number(at(key)) || 0;
+      const HR = num("homeRuns");
+      const RBI = num("RBIs");
+      const score = HR * 4 + RBI * 2 + num("runs") + num("hits") + num("walks") * 0.5;
+      return { name: a.athlete?.shortName, hAB: at("hits-atBats"), HR, RBI, score };
+    })
+    .filter((h: Any) => h.name && h.score > 0)
+    .sort((a: Any, b: Any) => b.score - a.score);
+
+  const fmtHitter = (h: Any) => {
+    const parts = [h.hAB];
+    if (h.HR > 0) parts.push(h.HR > 1 ? `${h.HR} HR` : "HR");
+    if (h.RBI > 0) parts.push(h.RBI > 1 ? `${h.RBI} RBI` : "RBI");
+    return `${lastName(h.name)} ${parts.join(", ")}`;
+  };
+
+  // The pitcher who threw the most innings (typically the starter).
+  const topPitcher = (pitching?.athletes ?? [])
+    .map((a: Any) => {
+      const at = (key: string) => a.stats?.[pitching.keys.indexOf(key)];
+      const ipStr = at("fullInnings.partInnings") ?? "0.0";
+      return { name: a.athlete?.shortName, ip: Number(ipStr) || 0, ipStr, er: at("earnedRuns"), k: at("strikeouts") };
+    })
+    .filter((p: Any) => p.name && p.ip > 0)
+    .sort((a: Any, b: Any) => b.ip - a.ip)[0];
+
+  const lines: string[] = [];
+  const hitterSlots = topPitcher ? Math.max(1, max - 1) : max;
+  for (const h of hitters.slice(0, hitterSlots)) lines.push(fmtHitter(h));
+  if (topPitcher) lines.push(`${lastName(topPitcher.name)} ${topPitcher.ipStr} IP, ${topPitcher.er} ER, ${topPitcher.k} K`);
+  return lines.slice(0, max);
+}
+
 export interface LiveDetails {
   live?: LiveSituation;
   eventId?: string;
@@ -538,6 +592,10 @@ export function createEspnAdapter(config: EspnAdapterConfig): EspnAdapter {
           );
           const wp = winProbabilityFromSummary(sum, abbr);
           if (wp != null && live) live.winProbability = wp;
+          // Prefer real box-score performers over the thin scoreboard leaders,
+          // which collapse to one name when a player tops every category.
+          const fromBox = topPlayersFromSummary(sum, abbr);
+          if (fromBox.length) topPlayers = fromBox;
         } catch {
           // win prob is best-effort; the live card renders without it
         }

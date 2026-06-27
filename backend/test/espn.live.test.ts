@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   topPlayersFromCompetition,
+  topPlayersFromSummary,
   liveDetailsFromScoreboard,
   winProbabilityFromSummary,
 } from "../src/adapters/espn.js";
@@ -27,6 +28,31 @@ describe("topPlayersFromCompetition", () => {
   it("returns [] for an unknown team", () => {
     const comp = fixture("mlb-scoreboard.json").events[0].competitions[0];
     expect(topPlayersFromCompetition(comp, "ZZZ")).toEqual([]);
+  });
+});
+
+describe("topPlayersFromSummary", () => {
+  const summary = fixture("espn-mlb-boxscore.json"); // CIN vs PIT live boxscore
+
+  it("ranks the watched team's hitters by game impact and appends the pitcher", () => {
+    const lines = topPlayersFromSummary(summary, "PIT");
+    // top hitter leads, with HR + RBI clauses (initial dropped)
+    expect(lines[0]).toBe("Griffin 1-2, HR, RBI");
+    // the most-used pitcher's line comes last
+    expect(lines[lines.length - 1]).toBe("Skenes 4.0 IP, 4 ER, 7 K");
+    expect(lines.length).toBeLessThanOrEqual(4);
+    expect(new Set(lines).size).toBe(lines.length); // no duplicate players
+  });
+
+  it("orders hitters by impact and keeps RBI clauses concise", () => {
+    const lines = topPlayersFromSummary(summary, "CIN");
+    expect(lines[0]).toBe("Stephenson 2-2, RBI");
+    expect(lines).toContain("Abbott 3.0 IP, 1 ER, 3 K");
+  });
+
+  it("returns [] when the team or boxscore is missing", () => {
+    expect(topPlayersFromSummary(summary, "ZZZ")).toEqual([]);
+    expect(topPlayersFromSummary({}, "PIT")).toEqual([]);
   });
 });
 

@@ -1,0 +1,520 @@
+{
+  "boxscore": {
+    "players": [
+      {
+        "team": {
+          "abbreviation": "CIN"
+        },
+        "statistics": [
+          {
+            "type": "batting",
+            "names": [
+              "H-AB",
+              "AB",
+              "R",
+              "H",
+              "RBI",
+              "HR",
+              "BB",
+              "K",
+              "#P",
+              "AVG",
+              "OBP",
+              "SLG"
+            ],
+            "keys": [
+              "hits-atBats",
+              "atBats",
+              "runs",
+              "hits",
+              "RBIs",
+              "homeRuns",
+              "walks",
+              "strikeouts",
+              "pitches",
+              "avg",
+              "onBasePct",
+              "slugAvg"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "shortName": "B. Dunn"
+                },
+                "stats": [
+                  "1-2",
+                  "2",
+                  "0",
+                  "1",
+                  "1",
+                  "0",
+                  "0",
+                  "1",
+                  "12",
+                  ".282",
+                  ".335",
+                  ".387"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "E. De La Cruz"
+                },
+                "stats": [
+                  "0-2",
+                  "2",
+                  "0",
+                  "0",
+                  "1",
+                  "0",
+                  "0",
+                  "1",
+                  "8",
+                  ".274",
+                  ".342",
+                  ".494"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "J. Bleday"
+                },
+                "stats": [
+                  "0-1",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "1",
+                  "1",
+                  "11",
+                  ".242",
+                  ".350",
+                  ".522"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "S. Stewart"
+                },
+                "stats": [
+                  "0-2",
+                  "2",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "1",
+                  "7",
+                  ".247",
+                  ".339",
+                  ".445"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "N. Lowe"
+                },
+                "stats": [
+                  "1-2",
+                  "2",
+                  "1",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "1",
+                  "8",
+                  ".259",
+                  ".352",
+                  ".483"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "E. Suarez"
+                },
+                "stats": [
+                  "1-2",
+                  "2",
+                  "1",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "10",
+                  ".212",
+                  ".275",
+                  ".370"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "S. Steer"
+                },
+                "stats": [
+                  "1-2",
+                  "2",
+                  "1",
+                  "1",
+                  "1",
+                  "0",
+                  "0",
+                  "1",
+                  "10",
+                  ".242",
+                  ".320",
+                  ".435"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "T. Stephenson"
+                },
+                "stats": [
+                  "2-2",
+                  "2",
+                  "1",
+                  "2",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "9",
+                  ".220",
+                  ".311",
+                  ".351"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "M. McLain"
+                },
+                "stats": [
+                  "0-1",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "1",
+                  "1",
+                  "13",
+                  ".199",
+                  ".304",
+                  ".347"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "pitching",
+            "names": [
+              "IP",
+              "H",
+              "R",
+              "ER",
+              "BB",
+              "K",
+              "HR",
+              "PC-ST",
+              "ERA",
+              "PC"
+            ],
+            "keys": [
+              "fullInnings.partInnings",
+              "hits",
+              "runs",
+              "earnedRuns",
+              "walks",
+              "strikeouts",
+              "homeRuns",
+              "pitches-strikes",
+              "ERA",
+              "pitches"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "shortName": "A. Abbott"
+                },
+                "stats": [
+                  "3.0",
+                  "4",
+                  "1",
+                  "1",
+                  "1",
+                  "3",
+                  "1",
+                  "50-37",
+                  "3.80",
+                  "50"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "team": {
+          "abbreviation": "PIT"
+        },
+        "statistics": [
+          {
+            "type": "batting",
+            "names": [
+              "H-AB",
+              "AB",
+              "R",
+              "H",
+              "RBI",
+              "HR",
+              "BB",
+              "K",
+              "#P",
+              "AVG",
+              "OBP",
+              "SLG"
+            ],
+            "keys": [
+              "hits-atBats",
+              "atBats",
+              "runs",
+              "hits",
+              "RBIs",
+              "homeRuns",
+              "walks",
+              "strikeouts",
+              "pitches",
+              "avg",
+              "onBasePct",
+              "slugAvg"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "shortName": "K. Griffin"
+                },
+                "stats": [
+                  "1-2",
+                  "2",
+                  "1",
+                  "1",
+                  "1",
+                  "1",
+                  "0",
+                  "0",
+                  "4",
+                  ".272",
+                  ".329",
+                  ".419"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "B. Lowe"
+                },
+                "stats": [
+                  "0-2",
+                  "2",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "7",
+                  ".247",
+                  ".324",
+                  ".512"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "B. Reynolds"
+                },
+                "stats": [
+                  "1-2",
+                  "2",
+                  "0",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "3",
+                  ".292",
+                  ".406",
+                  ".485"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "M. Ozuna"
+                },
+                "stats": [
+                  "1-2",
+                  "2",
+                  "0",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "11",
+                  ".204",
+                  ".283",
+                  ".318"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "R. O'Hearn"
+                },
+                "stats": [
+                  "0-1",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "1",
+                  "1",
+                  "8",
+                  ".283",
+                  ".342",
+                  ".462"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "E. Valdez"
+                },
+                "stats": [
+                  "0-1",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "1",
+                  "5",
+                  ".147",
+                  ".194",
+                  ".382"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "J. Triolo"
+                },
+                "stats": [
+                  "0-1",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "1",
+                  "4",
+                  ".226",
+                  ".298",
+                  ".267"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "J. Mangum"
+                },
+                "stats": [
+                  "1-1",
+                  "1",
+                  "0",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "2",
+                  ".295",
+                  ".339",
+                  ".353"
+                ]
+              },
+              {
+                "athlete": {
+                  "shortName": "H. Davis"
+                },
+                "stats": [
+                  "0-1",
+                  "1",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "0",
+                  "6",
+                  ".147",
+                  ".245",
+                  ".316"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "pitching",
+            "names": [
+              "IP",
+              "H",
+              "R",
+              "ER",
+              "BB",
+              "K",
+              "HR",
+              "PC-ST",
+              "ERA",
+              "PC"
+            ],
+            "keys": [
+              "fullInnings.partInnings",
+              "hits",
+              "runs",
+              "earnedRuns",
+              "walks",
+              "strikeouts",
+              "homeRuns",
+              "pitches-strikes",
+              "ERA",
+              "pitches"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "shortName": "P. Skenes"
+                },
+                "stats": [
+                  "4.0",
+                  "6",
+                  "4",
+                  "4",
+                  "2",
+                  "7",
+                  "0",
+                  "88-59",
+                  "3.13",
+                  "88"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
