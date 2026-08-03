@@ -9,6 +9,8 @@ import { createNcaafAdapter } from "./adapters/ncaaf.js";
 import { createNcaambAdapter } from "./adapters/ncaamb.js";
 import { createMlbStatsAdapter, type MlbStatsAdapter } from "./adapters/mlbStats.js";
 import { createBrefOddsAdapter, type BrefOddsAdapter } from "./adapters/brefOdds.js";
+import { createKalshiOddsAdapter, type KalshiOddsAdapter } from "./adapters/kalshiOdds.js";
+import { createNcaafExtrasAdapter, type NcaafExtrasAdapter } from "./adapters/ncaafExtras.js";
 import {
   createEditorialClient,
   fileStore,
@@ -19,6 +21,7 @@ import {
   isFeaturedEligible,
   type FeaturedTeamInput,
 } from "./featured.js";
+import { assembleMlbNcaafFeatured } from "./mlbNcaafFeatured.js";
 import type {
   Sport,
   SportsAdapter,
@@ -45,6 +48,10 @@ export interface BuildLiveOptions {
   brefOdds?: BrefOddsAdapter;
   /** Debug: regenerate editorial synchronously, bypassing the per-game cache. */
   forceEditorial?: boolean;
+  /** Kalshi playoff-qualifier market odds, for the workshop MLB/NCAAF layout. */
+  kalshiOdds?: KalshiOddsAdapter;
+  /** AP rank + real form for the Big Ten table, for the workshop MLB/NCAAF layout. */
+  ncaafExtras?: NcaafExtrasAdapter;
 }
 
 /** Featured services bundled separately from the per-sport adapter registry. */
@@ -52,6 +59,8 @@ export interface FeaturedServices {
   mlbStats: MlbStatsAdapter;
   editorial: EditorialClient;
   brefOdds: BrefOddsAdapter;
+  kalshiOdds: KalshiOddsAdapter;
+  ncaafExtras: NcaafExtrasAdapter;
 }
 
 function groupOf(team: WatchedTeam): string | undefined {
@@ -114,6 +123,17 @@ export async function buildLiveDashboard(
     ...(options.debugShowAll ? { debugShowAll: true } : {}),
     ...(options.debugSports ? { debugSports: options.debugSports } : {}),
   });
+
+  // 3b. Workshop-only: MLB/NCAAF combined Featured layout (Tigers + MSU
+  //     Football), reachable only via ?debug=ncaaf while it's being designed.
+  //     Falls through to the normal handling below on any failure.
+  if (options.debugSports?.includes("ncaaf")) {
+    try {
+      return await assembleMlbNcaafFeatured(dashboard, teamData, options);
+    } catch {
+      // fall through to the standard handling below
+    }
+  }
 
   // 4. The default for an MLB-only view is the rich Featured layout: scorebug
   //    cards with an LLM recap + hot/cold, division and (real, Stats API)
@@ -303,6 +323,8 @@ export function createDefaultFeaturedServices(
   return {
     mlbStats: createMlbStatsAdapter({ cache, now }),
     brefOdds: createBrefOddsAdapter({ cache, now }),
+    kalshiOdds: createKalshiOddsAdapter({ cache, now }),
+    ncaafExtras: createNcaafExtrasAdapter({ cache, now }),
     // Persist editorial so each game's recap + hot/cold is generated once, even
     // across restarts. Defaults to a local .cache dir; set EDITORIAL_CACHE_DIR
     // to a mounted persistent volume (e.g. /data on Railway) so the cache also

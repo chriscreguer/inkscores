@@ -34,6 +34,12 @@ export interface WatchedTeam {
   badge?: string;
   /** Full-colour team logo URL (ESPN CDN). Used by image-capable clients. */
   logoUrl?: string;
+  /**
+   * Only render this team via debug mode (?debug=all or ?debug=<sport>), never
+   * through the normal isTeamActive season-window/recency check. For a team
+   * whose dashboard layout is still being designed.
+   */
+  debugOnly?: boolean;
 }
 
 // ---------------------------------------------------------------------------

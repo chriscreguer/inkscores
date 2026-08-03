@@ -69,6 +69,7 @@ function contextFor(now: Date, summary?: TeamSummary): TeamContext {
 function isActive(input: BuildInput, data: TeamData): boolean {
   if (input.debugShowAll) return true;
   if (input.debugSports?.includes(data.team.sport)) return true;
+  if (data.team.debugOnly) return false;
   return isTeamActive(data.team, contextFor(input.now, data.summary));
 }
 

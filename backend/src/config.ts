@@ -69,6 +69,10 @@ export const WATCHED_TEAMS: WatchedTeam[] = [
     accent: "green",
     badge: "S",
     logoUrl: "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png",
+    // The combined MLB/NCAAF layout is still being designed (workshop via
+    // /preview?debug=ncaaf). Keep it off the live device so it doesn't knock
+    // the dashboard out of MLB-only Featured mode before it's ready.
+    debugOnly: true,
   },
   {
     key: "msu-basketball",
