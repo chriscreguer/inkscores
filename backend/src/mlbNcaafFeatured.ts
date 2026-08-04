@@ -33,7 +33,13 @@ function mockMsuLiveSummary(team: WatchedTeam): TeamSummary {
       isRedZone: false,
       hasPossession: true,
       winProbability: 61,
-      topPlayers: ["Watson 210 pass yds, 2 TD"],
+      // Shape matches topPlayersFromFootballSummary's real output (top
+      // passer/rusher/receiver by yards) — see espn.ts.
+      topPlayers: [
+        "Watson 245 pass yds, 2 TD",
+        "Carter 88 rush yds, 1 TD",
+        "Reed 94 rec yds, 1 TD",
+      ],
     },
   };
 }

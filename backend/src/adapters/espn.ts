@@ -270,6 +270,65 @@ export function topPlayersFromSummary(raw: Any, teamAbbr: string, max = 4): stri
   return lines.slice(0, max);
 }
 
+/**
+ * Football equivalent of topPlayersFromSummary: the watched team's top
+ * passer/rusher/receiver by yards, from the box score in the per-game summary
+ * payload (same one already fetched for win probability). Same role as
+ * hot/cold plays for MLB — real, per-game stat leaders instead of an
+ * LLM-invented storyline.
+ *
+ * Best-effort and UNVERIFIED against a real live game: ESPN's exact
+ * college-football box-score category/key names (`passing`/`rushingYards`/
+ * etc.) were sourced from documented conventions, not confirmed live, since
+ * no game existed to test against when this was written. A wrong key name
+ * just yields [] for that category — the caller already falls back to the
+ * thinner (but confirmed-working) scoreboard-leaders version if this returns
+ * nothing. Worth re-checking against `?debug=ncaaf` once a real game is live.
+ */
+export function topPlayersFromFootballSummary(raw: Any, teamAbbr: string, max = 3): string[] {
+  const teams: Any[] = raw?.boxscore?.players ?? [];
+  const group = teams.find((t) => t.team?.abbreviation === teamAbbr);
+  if (!group) return [];
+  const stats: Any[] = group.statistics ?? [];
+
+  // ESPN shortName is "F. Lastname"; drop the leading initial for the card.
+  const lastName = (n: Any) => String(n ?? "").replace(/^[A-Za-z]\.\s+/, "");
+
+  const bestFrom = (
+    categoryName: string,
+    yardsKey: string,
+    tdKey: string,
+    label: string,
+  ): string | undefined => {
+    const cat = stats.find((g: Any) => g.name === categoryName || g.type === categoryName);
+    const keys: string[] = cat?.keys ?? [];
+    const yIdx = keys.indexOf(yardsKey);
+    if (!cat || yIdx < 0) return undefined;
+    const tIdx = keys.indexOf(tdKey);
+
+    const best = (cat.athletes ?? [])
+      .map((a: Any) => ({
+        name: a.athlete?.shortName,
+        yards: Number(a.stats?.[yIdx]) || 0,
+        tds: tIdx >= 0 ? Number(a.stats?.[tIdx]) || 0 : 0,
+      }))
+      .filter((p: Any) => p.name && p.yards > 0)
+      .sort((a: Any, b: Any) => b.yards - a.yards)[0];
+    if (!best) return undefined;
+
+    const tdPart = best.tds > 0 ? `, ${best.tds} TD` : "";
+    return `${lastName(best.name)} ${best.yards} ${label}${tdPart}`;
+  };
+
+  const lines = [
+    bestFrom("passing", "passingYards", "passingTouchdowns", "pass yds"),
+    bestFrom("rushing", "rushingYards", "rushingTouchdowns", "rush yds"),
+    bestFrom("receiving", "receivingYards", "receivingTouchdowns", "rec yds"),
+  ].filter((line): line is string => Boolean(line));
+
+  return lines.slice(0, max);
+}
+
 export interface LiveDetails {
   live?: LiveSituation;
   eventId?: string;
@@ -657,7 +716,10 @@ export function createEspnAdapter(config: EspnAdapterConfig): EspnAdapter {
           if (wp != null && live) live.winProbability = wp;
           // Prefer real box-score performers over the thin scoreboard leaders,
           // which collapse to one name when a player tops every category.
-          const fromBox = topPlayersFromSummary(sum, abbr);
+          const fromBox =
+            config.sport === "ncaaf" || config.sport === "nfl"
+              ? topPlayersFromFootballSummary(sum, abbr)
+              : topPlayersFromSummary(sum, abbr);
           if (fromBox.length) topPlayers = fromBox;
         } catch {
           // win prob is best-effort; the live card renders without it

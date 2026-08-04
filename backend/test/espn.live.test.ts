@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   topPlayersFromCompetition,
   topPlayersFromSummary,
+  topPlayersFromFootballSummary,
   liveDetailsFromScoreboard,
   winProbabilityFromSummary,
 } from "../src/adapters/espn.js";
@@ -119,5 +120,72 @@ describe("winProbabilityFromSummary", () => {
   it("returns undefined when data is missing", () => {
     expect(winProbabilityFromSummary({}, "TB")).toBeUndefined();
     expect(winProbabilityFromSummary(summary, "ZZZ")).toBeUndefined();
+  });
+});
+
+describe("topPlayersFromFootballSummary", () => {
+  // Synthetic — not a real ESPN payload, since no live CFB game existed to
+  // capture one from when this was written. Shape mirrors the documented
+  // boxscore.players[].statistics[] convention (name/keys/athletes).
+  const summary = {
+    boxscore: {
+      players: [
+        {
+          team: { abbreviation: "MSU" },
+          statistics: [
+            {
+              name: "passing",
+              keys: ["completions/passingAttempts", "passingYards", "passingTouchdowns"],
+              athletes: [
+                { athlete: { shortName: "B. Watson" }, stats: ["18/27", "245", "2"] },
+                { athlete: { shortName: "T. Backup" }, stats: ["0/1", "0", "0"] },
+              ],
+            },
+            {
+              name: "rushing",
+              keys: ["rushingAttempts", "rushingYards", "rushingTouchdowns"],
+              athletes: [
+                { athlete: { shortName: "N. Carter" }, stats: ["14", "88", "1"] },
+                { athlete: { shortName: "B. Watson" }, stats: ["6", "12", "0"] },
+              ],
+            },
+            {
+              name: "receiving",
+              keys: ["receptions", "receivingYards", "receivingTouchdowns"],
+              athletes: [
+                { athlete: { shortName: "J. Reed" }, stats: ["6", "94", "1"] },
+                { athlete: { shortName: "N. Carter" }, stats: ["2", "20", "0"] },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  };
+
+  it("picks the top passer/rusher/receiver by yards, with TDs when scored", () => {
+    const lines = topPlayersFromFootballSummary(summary, "MSU");
+    expect(lines).toEqual([
+      "Watson 245 pass yds, 2 TD",
+      "Carter 88 rush yds, 1 TD",
+      "Reed 94 rec yds, 1 TD",
+    ]);
+  });
+
+  it("omits the TD clause for a scoreless leader", () => {
+    const noTds = JSON.parse(JSON.stringify(summary));
+    noTds.boxscore.players[0].statistics[0].athletes[0].stats = ["18/27", "245", "0"];
+    const lines = topPlayersFromFootballSummary(noTds, "MSU");
+    expect(lines[0]).toBe("Watson 245 pass yds");
+  });
+
+  it("returns [] when the team or box score is missing", () => {
+    expect(topPlayersFromFootballSummary(summary, "ZZZ")).toEqual([]);
+    expect(topPlayersFromFootballSummary({}, "MSU")).toEqual([]);
+  });
+
+  it("returns [] instead of throwing when category keys don't match", () => {
+    const wrongKeys = { boxscore: { players: [{ team: { abbreviation: "MSU" }, statistics: [{ name: "passing", keys: ["unexpected"], athletes: [] }] }] } };
+    expect(topPlayersFromFootballSummary(wrongKeys, "MSU")).toEqual([]);
   });
 });
