@@ -11,6 +11,7 @@ import { createMlbStatsAdapter, type MlbStatsAdapter } from "./adapters/mlbStats
 import { createBrefOddsAdapter, type BrefOddsAdapter } from "./adapters/brefOdds.js";
 import { createKalshiOddsAdapter, type KalshiOddsAdapter } from "./adapters/kalshiOdds.js";
 import { createNcaafExtrasAdapter, type NcaafExtrasAdapter } from "./adapters/ncaafExtras.js";
+import { createNflExtrasAdapter, type NflExtrasAdapter } from "./adapters/nflExtras.js";
 import {
   createEditorialClient,
   fileStore,
@@ -21,7 +22,7 @@ import {
   isFeaturedEligible,
   type FeaturedTeamInput,
 } from "./featured.js";
-import { assembleMlbNcaafFeatured } from "./mlbNcaafFeatured.js";
+import { assembleMlbCombinedFeatured } from "./mlbCombinedFeatured.js";
 import type {
   Sport,
   SportsAdapter,
@@ -48,11 +49,13 @@ export interface BuildLiveOptions {
   brefOdds?: BrefOddsAdapter;
   /** Debug: regenerate editorial synchronously, bypassing the per-game cache. */
   forceEditorial?: boolean;
-  /** Kalshi playoff-qualifier market odds, for the workshop MLB/NCAAF layout. */
+  /** Kalshi playoff-qualifier market odds, for the workshop combined layout. */
   kalshiOdds?: KalshiOddsAdapter;
-  /** AP rank + real form for the Big Ten table, for the workshop MLB/NCAAF layout. */
+  /** AP rank + real form for the Big Ten table, for the workshop combined layout. */
   ncaafExtras?: NcaafExtrasAdapter;
-  /** Debug: inject a synthetic live MSU game into the workshop MLB/NCAAF
+  /** Real form for the NFC North table, for the workshop combined layout. */
+  nflExtras?: NflExtrasAdapter;
+  /** Debug: inject a synthetic live MSU game into the workshop combined
    * layout, so the field-position live card can be previewed before the
    * season actually starts. */
   mockNcaafLive?: boolean;
@@ -65,6 +68,7 @@ export interface FeaturedServices {
   brefOdds: BrefOddsAdapter;
   kalshiOdds: KalshiOddsAdapter;
   ncaafExtras: NcaafExtrasAdapter;
+  nflExtras: NflExtrasAdapter;
 }
 
 function groupOf(team: WatchedTeam): string | undefined {
@@ -128,12 +132,14 @@ export async function buildLiveDashboard(
     ...(options.debugSports ? { debugSports: options.debugSports } : {}),
   });
 
-  // 3b. Workshop-only: MLB/NCAAF combined Featured layout (Tigers + MSU
-  //     Football), reachable only via ?debug=ncaaf while it's being designed.
-  //     Falls through to the normal handling below on any failure.
-  if (options.debugSports?.includes("ncaaf")) {
+  // 3b. Workshop-only: MLB/NFL/NCAAF combined Featured layout that rotates
+  //     the second (and eventually first) card slot across whichever of
+  //     Tigers/Cubs/Lions/MSU Football is actually in season. Reachable via
+  //     ?debug=ncaaf or ?debug=nfl while Lions/MSU Football stay behind
+  //     WatchedTeam.debugOnly. Falls through to normal handling on failure.
+  if (options.debugSports?.includes("ncaaf") || options.debugSports?.includes("nfl")) {
     try {
-      return await assembleMlbNcaafFeatured(dashboard, teamData, options);
+      return await assembleMlbCombinedFeatured(dashboard, teamData, options);
     } catch {
       // fall through to the standard handling below
     }
@@ -329,6 +335,7 @@ export function createDefaultFeaturedServices(
     brefOdds: createBrefOddsAdapter({ cache, now }),
     kalshiOdds: createKalshiOddsAdapter({ cache, now }),
     ncaafExtras: createNcaafExtrasAdapter({ cache, now }),
+    nflExtras: createNflExtrasAdapter({ cache, now }),
     // Persist editorial so each game's recap + hot/cold is generated once, even
     // across restarts. Defaults to a local .cache dir; set EDITORIAL_CACHE_DIR
     // to a mounted persistent volume (e.g. /data on Railway) so the cache also

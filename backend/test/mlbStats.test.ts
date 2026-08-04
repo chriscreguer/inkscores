@@ -12,6 +12,7 @@ import {
   parsePitcherForms,
   rankPlayerForms,
   formChip,
+  isStatsTeamEliminated,
 } from "../src/adapters/mlbStats.js";
 
 function fixture(name: string): unknown {
@@ -174,6 +175,31 @@ describe("parseRecentForm", () => {
   });
 });
 
+describe("isStatsTeamEliminated", () => {
+  it("false for a team still alive in the wild-card race (a small countdown number)", () => {
+    const abbr = parseTeamAbbrMap(teamsRaw);
+    const teams = parseStatsStandings(standingsRaw, abbr);
+    expect(isStatsTeamEliminated(teams.find((t) => t.abbr === "DET"))).toBe(false);
+  });
+
+  it("false for a division leader regardless of wild-card number", () => {
+    const abbr = parseTeamAbbrMap(teamsRaw);
+    const teams = parseStatsStandings(standingsRaw, abbr);
+    expect(isStatsTeamEliminated(teams.find((t) => t.abbr === "NYY"))).toBe(false);
+  });
+
+  it("true once the Stats API reports the wild-card race as over (\"E\")", () => {
+    const abbr = parseTeamAbbrMap(teamsRaw);
+    const teams = parseStatsStandings(standingsRaw, abbr);
+    const det = teams.find((t) => t.abbr === "DET")!;
+    expect(isStatsTeamEliminated({ ...det, wildCardEliminationNumber: "E" })).toBe(true);
+  });
+
+  it("false for undefined (unknown team)", () => {
+    expect(isStatsTeamEliminated(undefined)).toBe(false);
+  });
+});
+
 describe("createMlbStatsAdapter", () => {
   it("returns AL + NL playoff tables from injected fetch (no network)", async () => {
     const adapter = createMlbStatsAdapter({
@@ -188,6 +214,25 @@ describe("createMlbStatsAdapter", () => {
     expect(tables.map((t) => t.id)).toEqual(["al-playoff", "nl-playoff"]);
     expect(tables[0]!.accent).toBe("blue");
     expect(tables[1]!.rows.some((r) => r[1] === "CHC")).toBe(true);
+  });
+
+  it("isEliminated reads real wins/elimination data (Tigers not eliminated in the fixture)", async () => {
+    const adapter = createMlbStatsAdapter({
+      fetchJson: async (url: string) =>
+        url.includes("/teams") ? teamsRaw : standingsRaw,
+      now: () => new Date("2026-06-25T12:00:00Z"),
+    });
+    expect(await adapter.isEliminated("DET")).toBe(false);
+  });
+
+  it("isEliminated is best-effort: false (not true) when the lookup throws", async () => {
+    const adapter = createMlbStatsAdapter({
+      fetchJson: async () => {
+        throw new Error("network down");
+      },
+      now: () => new Date("2026-06-25T12:00:00Z"),
+    });
+    expect(await adapter.isEliminated("DET")).toBe(false);
   });
 });
 

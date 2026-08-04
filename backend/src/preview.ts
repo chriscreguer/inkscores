@@ -238,9 +238,12 @@ const TEAM_LOGO_FILES = {
   RUTG: "/preview/team-logos/rutg.png",
 };
 
+// Keyed by watched-team key ("tigers"), not ESPN abbreviation ("DET") — the
+// Lions share that same abbreviation (both are Detroit teams, different
+// sports), and an abbr-keyed scale would incorrectly apply to them too.
 function logoVisualScaleFor(key) {
   const k = String(key || "").toLowerCase();
-  return k === "det" || k === "tigers" ? 1.18 : 1;
+  return k === "tigers" ? 1.18 : 1;
 }
 
 function scorebugVariantFor(s) {
@@ -341,10 +344,13 @@ function drawRasterLogoImage(ctx, img, key, x, y, size) {
 
 function drawTeamLogoMark(ctx, s, x, y, size) {
   const name = logoNameFor(s);
+  const teamKey = teamKeyFor(s);
   const abbr = String(teamAbbrFor(s) || "").toUpperCase();
   const raster = RASTER_LOGOS[abbr];
-  if (raster && logoVisualScaleFor(abbr) !== 1) {
-    drawRasterLogoImage(ctx, raster, abbr, x, y, size);
+  // Gate on the unambiguous watched-team key, not the ESPN abbreviation —
+  // Tigers and Lions both resolve to "DET" (see logoVisualScaleFor).
+  if (raster && logoVisualScaleFor(teamKey) !== 1) {
+    drawRasterLogoImage(ctx, raster, teamKey, x, y, size);
     return;
   }
   if (name && size === (LOGOS.size || 44)) {
@@ -1657,19 +1663,29 @@ function render() {
   if (sideBySideMock) {
     const leftStandTop = M + TOP_NOTE_GAP + (cards[0] ? cardHFor(cards[0]) : cardH()) + GAP;
     const rightStandTop = M + TOP_NOTE_GAP + (cards[1] ? cardHFor(cards[1]) : cardH()) + GAP;
+    // Prefer the explicit cardIndex the assembler stamps on each table — an
+    // id-prefix guess ("al-"/"nl-" = left/right) only worked back when card 0
+    // was always MLB. Older mocks that never set cardIndex still render via
+    // the legacy regex fallback below.
+    const hasCardIndex = allStand.some((s) => s.cardIndex === 0 || s.cardIndex === 1);
+    const leftTables = hasCardIndex
+      ? allStand.filter((s) => s.cardIndex === 0)
+      : allStand.filter((s) => /^al-/i.test(String(s.id || "")));
     let leftY = leftStandTop;
-    allStand.filter((s) => /^al-/i.test(String(s.id || ""))).forEach((t, i) => {
+    leftTables.forEach((t, i) => {
       const h = drawStandings(ctx, t, LEFT, leftY);
       leftY += h + (i === 0 ? 8 : 0);
     });
-    const rightTables = allStand.filter((s) => /^nl-/i.test(String(s.id || "")));
+    const rightTables = hasCardIndex
+      ? allStand.filter((s) => s.cardIndex === 1)
+      : allStand.filter((s) => /^nl-/i.test(String(s.id || "")));
     if (rightTables.length) {
       let rightY = rightStandTop;
       rightTables.forEach((t, i) => {
         const h = drawStandings(ctx, t, RIGHT, rightY);
         rightY += h + (i === 0 ? 8 : 0);
       });
-    } else {
+    } else if (!hasCardIndex) {
       const right = allStand.find((s) => !/^al-/i.test(String(s.id || "")));
       if (right) drawStandings(ctx, right, RIGHT, rightStandTop);
     }

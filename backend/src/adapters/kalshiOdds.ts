@@ -1,18 +1,21 @@
 import { TtlCache, CACHE_TTLS } from "../cache.js";
 
 /**
- * Kalshi's "will this team make the College Football Playoff" market. Public,
- * unauthenticated, real JSON (no scraping) — the CFB equivalent of the
- * Baseball-Reference playoff-odds page used for MLB. Kalshi only lists a
- * market for teams with a realistic shot, so most non-contenders (including
- * Michigan State, currently) simply have no entry — callers should treat a
- * missing key as "no data", not "0%".
+ * Kalshi's "will this team make the playoffs" markets (one series per
+ * league). Public, unauthenticated, real JSON (no scraping) — the CFB/NFL
+ * equivalent of the Baseball-Reference playoff-odds page used for MLB.
+ * Kalshi only lists a market for teams with a realistic shot, so most
+ * non-contenders (including Michigan State, currently) simply have no
+ * entry — callers should treat a missing key as "no data", not "0%".
  */
-const KALSHI_MARKETS_URL =
-  "https://external-api.kalshi.com/trade-api/v2/markets?series_ticker=KXNCAAFPLAYOFF&status=open&limit=200";
+function marketsUrl(seriesTicker: string): string {
+  return `https://external-api.kalshi.com/trade-api/v2/markets?series_ticker=${seriesTicker}&status=open&limit=200`;
+}
 
-/** ESPN standings abbreviation -> Kalshi ticker suffix, only where they differ. */
-const ESPN_TO_KALSHI_ABBR: Record<string, string> = {
+/** ESPN standings abbreviation -> Kalshi ticker suffix, only where they differ.
+ * Confirmed against the live market list: NFC North (DET/GB/CHI/MIN) all
+ * match ESPN's own abbreviation, no override needed there. */
+const NCAAF_ESPN_TO_KALSHI_ABBR: Record<string, string> = {
   IU: "IND", // Indiana
 };
 
@@ -48,6 +51,8 @@ export function parseKalshiPlayoffOdds(json: KalshiMarketsResponse): Record<stri
 export interface KalshiOddsAdapter {
   /** Make-playoffs percentage (0-100) keyed by ESPN standings abbreviation. */
   getNcaafPlayoffOdds(): Promise<Record<string, number>>;
+  /** Same idea, NFL's make-the-playoffs market. */
+  getNflPlayoffOdds(): Promise<Record<string, number>>;
 }
 
 export function createKalshiOddsAdapter(deps?: {
@@ -66,19 +71,27 @@ export function createKalshiOddsAdapter(deps?: {
       return (await res.json()) as KalshiMarketsResponse;
     });
 
+  async function playoffOdds(
+    cacheKey: string,
+    seriesTicker: string,
+    espnToKalshiAbbr: Record<string, string>,
+  ): Promise<Record<string, number>> {
+    const byTicker = await cache.getOrLoad(cacheKey, CACHE_TTLS.gameDay, () =>
+      fetchJson(marketsUrl(seriesTicker)).then(parseKalshiPlayoffOdds),
+    );
+    const out: Record<string, number> = {};
+    for (const [espnAbbr, kalshiSuffix] of Object.entries(espnToKalshiAbbr)) {
+      if (byTicker[kalshiSuffix] != null) out[espnAbbr] = byTicker[kalshiSuffix]!;
+    }
+    for (const [ticker, pct] of Object.entries(byTicker)) {
+      if (out[ticker] == null) out[ticker] = pct;
+    }
+    return out;
+  }
+
   return {
-    async getNcaafPlayoffOdds() {
-      const byTicker = await cache.getOrLoad("kalshi:ncaaf-playoff-odds", CACHE_TTLS.gameDay, () =>
-        fetchJson(KALSHI_MARKETS_URL).then(parseKalshiPlayoffOdds),
-      );
-      const out: Record<string, number> = {};
-      for (const [espnAbbr, kalshiSuffix] of Object.entries(ESPN_TO_KALSHI_ABBR)) {
-        if (byTicker[kalshiSuffix] != null) out[espnAbbr] = byTicker[kalshiSuffix]!;
-      }
-      for (const [ticker, pct] of Object.entries(byTicker)) {
-        if (out[ticker] == null) out[ticker] = pct;
-      }
-      return out;
-    },
+    getNcaafPlayoffOdds: () =>
+      playoffOdds("kalshi:ncaaf-playoff-odds", "KXNCAAFPLAYOFF", NCAAF_ESPN_TO_KALSHI_ABBR),
+    getNflPlayoffOdds: () => playoffOdds("kalshi:nfl-playoff-odds", "KXNFLPLAYOFF", {}),
   };
 }

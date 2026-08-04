@@ -56,4 +56,25 @@ describe("createKalshiOddsAdapter", () => {
     const odds = await adapter.getNcaafPlayoffOdds();
     expect(odds.MSU).toBeUndefined();
   });
+
+  it("getNflPlayoffOdds hits the NFL series and needs no abbreviation overrides", async () => {
+    const nflMarkets = {
+      markets: [
+        { ticker: "KXNFLPLAYOFF-27-DET", last_price_dollars: "0.8100" },
+        { ticker: "KXNFLPLAYOFF-27-GB", last_price_dollars: "0.6200" },
+      ],
+    };
+    const adapter = createKalshiOddsAdapter({
+      fetchJson: async (url: string) =>
+        url.includes("KXNFLPLAYOFF") ? nflMarkets : sampleMarkets,
+    });
+    const nflOdds = await adapter.getNflPlayoffOdds();
+    expect(nflOdds.DET).toBeCloseTo(81, 0);
+    expect(nflOdds.GB).toBeCloseTo(62, 0);
+
+    // The two series stay independent — NCAAF odds unaffected.
+    const ncaafOdds = await adapter.getNcaafPlayoffOdds();
+    expect(ncaafOdds.OSU).toBeCloseTo(77, 0);
+    expect(ncaafOdds.DET).toBeUndefined();
+  });
 });

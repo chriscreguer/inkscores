@@ -165,6 +165,14 @@ export function parseStatsStandings(
   return out;
 }
 
+/** True once a team can no longer reach the postseason by any path — not a
+ * division leader, and the Stats API reports the wild-card race itself as
+ * over for them ("E", not just a small countdown number). */
+export function isStatsTeamEliminated(t: StatsTeam | undefined): boolean {
+  if (!t) return false;
+  return !t.divisionLeader && t.wildCardEliminationNumber === "E";
+}
+
 /** Format a make-playoffs % for the narrow odds column (kept local to avoid a
  * circular import with the B-Ref adapter). */
 function formatOddsPct(pct: number | undefined): string | undefined {
@@ -491,6 +499,10 @@ export interface MlbStatsAdapter {
     abbr: string,
     cacheKey: string,
   ): Promise<{ hot: string[]; cold: string[] }>;
+  /** True once the team is mathematically out of the postseason picture
+   * entirely (not leading its division, and eliminated from the wild card
+   * too). Best-effort: false (not eliminated) on any lookup failure. */
+  isEliminated(abbr: string): Promise<boolean>;
 }
 
 /**
@@ -595,5 +607,17 @@ export function createMlbStatsAdapter(deps?: MlbStatsDeps): MlbStatsAdapter {
     );
   }
 
-  return { getPlayoffTables, getRecentForm, getHotCold };
+  async function isEliminated(abbr: string): Promise<boolean> {
+    try {
+      const [raw, abbrById] = await Promise.all([loadStandings(), loadAbbrMap()]);
+      const teams = parseStatsStandings(raw, abbrById);
+      const canonical = canonicalAbbr(abbr);
+      const team = teams.find((t) => canonicalAbbr(t.abbr) === canonical);
+      return isStatsTeamEliminated(team);
+    } catch {
+      return false;
+    }
+  }
+
+  return { getPlayoffTables, getRecentForm, getHotCold, isEliminated };
 }

@@ -185,6 +185,10 @@ export interface StandingsSection {
   cutoffAfter?: number;
   /** Draw a solid section divider after this many rows (e.g. division leaders). */
   dividerAfter?: number;
+  /** Which team-comparison card column (0=left, 1=right) this table belongs
+   * under. Renderers should prefer this over any id-prefix convention — it's
+   * the only association that stays correct once card 0 isn't always MLB. */
+  cardIndex?: 0 | 1;
 }
 
 export interface MessageSection {
