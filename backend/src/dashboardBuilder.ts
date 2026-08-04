@@ -29,7 +29,7 @@ const STANDINGS_TOP_N: Record<Sport, number | undefined> = {
   mlb: undefined, // show all five division teams
   nba: 10, // Eastern Conference top 10 + Pistons
   nfl: undefined, // show all four NFC North teams
-  ncaaf: 8, // Big Ten top 8 + MSU
+  ncaaf: 14, // Big Ten top 14 + MSU
   ncaamb: 8, // Big Ten top 8 + MSU
 };
 
