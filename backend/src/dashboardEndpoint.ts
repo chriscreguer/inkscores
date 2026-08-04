@@ -6,7 +6,7 @@ import {
 import { DEFAULT_TIMEZONE } from "./config.js";
 import type { Dashboard, Sport } from "./types.js";
 
-const DEBUG_SPORTS: Sport[] = ["mlb", "nba", "ncaaf", "ncaamb"];
+const DEBUG_SPORTS: Sport[] = ["mlb", "nba", "nfl", "ncaaf", "ncaamb"];
 
 export interface DashboardQuery {
   mock?: string;

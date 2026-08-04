@@ -43,6 +43,12 @@ export const WATCHED_TEAMS: WatchedTeam[] = [
     accent: "blue",
     badge: "L",
     logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/det.png",
+    // NFL preseason activates this via isTeamActive's "next game within 14
+    // days" branch well before Sept 1 — same MLB-only-breaking issue MSU
+    // Football hit (see mlbNcaafFeatured.ts). Keep off the live device until
+    // there's a real plan for how a 3rd/4th simultaneously-active sport
+    // should be prioritized, not just whichever one happens to activate first.
+    debugOnly: true,
   },
   {
     key: "pistons",
@@ -56,6 +62,9 @@ export const WATCHED_TEAMS: WatchedTeam[] = [
     accent: "red",
     badge: "P",
     logoUrl: "https://a.espncdn.com/i/teamlogos/nba/500/det.png",
+    // Same reasoning as Lions above — NBA season starts in October but the
+    // same premature-activation risk applies.
+    debugOnly: true,
   },
   {
     key: "msu-football",
