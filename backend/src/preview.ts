@@ -754,9 +754,19 @@ function drawLiveCard(ctx, s, x, y) {
     const statTop = y + 68, lineH = 15;
     const maxLines = Math.max(1, Math.min(2, Math.floor((winRowY - statTop) / lineH)));
     let sy = statTop;
-    for (const line of layoutStatLines(ctx, stats, COL_W - 24, font, maxLines)) {
-      txt(ctx, line, x + 12, sy, 13, "400", INK.black);
-      sy += lineH;
+    if (isFootball) {
+      // Bold the player name in each entry (e.g. "Watson 245 pass yds, 2 TD")
+      // so a scan of the line finds the names first, same idea as MLB's
+      // W/L-coloured result letter.
+      for (const entries of packStatEntries(ctx, stats, COL_W - 24, font, maxLines)) {
+        drawStatEntriesBoldNames(ctx, entries, x + 12, sy, 13, INK.black);
+        sy += lineH;
+      }
+    } else {
+      for (const line of layoutStatLines(ctx, stats, COL_W - 24, font, maxLines)) {
+        txt(ctx, line, x + 12, sy, 13, "400", INK.black);
+        sy += lineH;
+      }
     }
   }
 
@@ -781,6 +791,56 @@ function layoutStatLines(ctx, stats, maxW, font, maxLines) {
   }
   if (cur && lines.length < maxLines) lines.push(cur);
   return lines.slice(0, maxLines).map((l) => fitWidth(ctx, l, maxW, font));
+}
+
+// Same packing rule as layoutStatLines, but keeps each line as separate
+// entries (not pre-joined into one string) so the player name in each entry
+// can be drawn bold while the stat clause after it stays regular weight.
+function packStatEntries(ctx, stats, maxW, font, maxLines) {
+  ctx.font = font;
+  const lines = [];
+  let cur = [];
+  let curText = "";
+  for (const st of stats) {
+    const candidate = curText ? curText + " · " + st : st;
+    if (curText && ctx.measureText(candidate).width > maxW) {
+      lines.push(cur);
+      cur = [st];
+      curText = st;
+      if (lines.length === maxLines) { cur = []; curText = ""; break; }
+    } else {
+      cur.push(st);
+      curText = candidate;
+    }
+  }
+  if (cur.length && lines.length < maxLines) lines.push(cur);
+  return lines.slice(0, maxLines);
+}
+
+// Draw one line of stat entries (e.g. "Watson 245 pass yds, 2 TD") with each
+// player's name bold and the rest of the clause regular weight, joined by
+// " · " in regular weight.
+function drawStatEntriesBoldNames(ctx, entries, x, y, size, color) {
+  let cx = x;
+  entries.forEach((entry, i) => {
+    if (i > 0) {
+      const sep = " · ";
+      txt(ctx, sep, cx, y, size, "400", color);
+      ctx.font = "400 " + size + "px " + fam();
+      cx += ctx.measureText(sep).width;
+    }
+    const sp = entry.indexOf(" ");
+    const name = sp < 0 ? entry : entry.slice(0, sp);
+    const rest = sp < 0 ? "" : entry.slice(sp);
+    txt(ctx, name, cx, y, size, "700", color);
+    ctx.font = "700 " + size + "px " + fam();
+    cx += ctx.measureText(name).width;
+    if (rest) {
+      txt(ctx, rest, cx, y, size, "400", color);
+      ctx.font = "400 " + size + "px " + fam();
+      cx += ctx.measureText(rest).width;
+    }
+  });
 }
 
 function drawWinProbabilityBar(ctx, s, x, y, probability, rowY) {
