@@ -8,7 +8,35 @@ import type {
   DashboardSection,
   StandingsSection,
   TeamCardSection,
+  TeamSummary,
+  WatchedTeam,
 } from "./types.js";
+
+/** A synthetic mid-season live MSU game, for ?debug=ncaaf-live — lets the
+ * field-position live card be previewed before the real season starts. */
+function mockMsuLiveSummary(team: WatchedTeam): TeamSummary {
+  return {
+    teamKey: team.key,
+    label: team.label,
+    sport: "ncaaf",
+    isLive: true,
+    hasGameToday: true,
+    record: "3-2",
+    live: {
+      score: "17-14",
+      opponent: "OSU",
+      homeAway: "home",
+      detail: "8:42 - 3rd",
+      down: 3,
+      distance: 7,
+      yardsToGoal: 42,
+      isRedZone: false,
+      hasPossession: true,
+      winProbability: 61,
+      topPlayers: ["Watson 210 pass yds, 2 TD"],
+    },
+  };
+}
 
 /**
  * Workshop-only variant of the Featured layout: Tigers keep their normal MLB
@@ -57,6 +85,9 @@ export async function assembleMlbNcaafFeatured(
   if (!tigers || !msuFootball) {
     throw new Error("mlb/ncaaf featured requires both tigers and msu-football");
   }
+  const msuSummary: TeamSummary | undefined = options.mockNcaafLive
+    ? mockMsuLiveSummary(msuFootball.team)
+    : msuFootball.summary;
 
   const tigersCard = base.sections.find(
     (s): s is TeamCardSection => s.type === "teamCard" && s.id === "tigers-card",
@@ -119,18 +150,41 @@ export async function assembleMlbNcaafFeatured(
   }
 
   const tigersFeaturedCard = buildFeaturedCard(tigersInput);
+
+  // No completed game yet: a preseason outlook (LLM) fills the card instead of
+  // a last-game recap. Same non-blocking getOrQueue pattern as the recap.
+  let msuOutlook: string | undefined;
+  if (options.editorial && !msuSummary?.isLive && !msuSummary?.lastGame) {
+    const season = String((options.now ?? new Date()).getUTCFullYear());
+    const { editorial } = options.editorial.getOrQueueOutlook(msuFootball.team.key, {
+      teamName: msuFootball.team.fullName,
+      season,
+    });
+    msuOutlook = editorial.summary;
+  }
+
+  // The base dashboard's card was built from the real (non-mocked) summary,
+  // so a mocked live game needs its status/live carried onto the card too —
+  // buildFeaturedCard's live branch returns the card as-is, it doesn't derive
+  // `live` from the summary itself (see featured.ts).
+  const msuCardForBuild: TeamCardSection =
+    options.mockNcaafLive && msuSummary?.live
+      ? { ...msuCard, status: "live", live: msuSummary.live }
+      : msuCard;
+
   const msuFeaturedCardRaw = buildFeaturedCard({
-    card: msuCard,
+    card: msuCardForBuild,
     team: msuFootball.team,
-    ...(msuFootball.summary ? { summary: msuFootball.summary } : {}),
+    ...(msuSummary ? { summary: msuSummary } : {}),
+    ...(msuOutlook ? { editorial: { summary: msuOutlook } } : {}),
   });
   // No completed game yet (buildFeaturedCard falls back to "standard", which
   // shows a large title + bottom-left next game). Once there's a real next
   // game, match the Tigers scorebug card's convention instead: no title text,
-  // next game styled/positioned top-right like the scorebug's next-game slot.
+  // next game styled/positioned top-right like the scorebug's next-game slot,
+  // preseason outlook filling the body.
   const hasUpcomingGame =
     msuFeaturedCardRaw.cardVariant === "standard" &&
-    !msuFeaturedCardRaw.summary &&
     msuFeaturedCardRaw.next != null &&
     msuFeaturedCardRaw.next !== "—";
   const msuFeaturedCard: TeamCardSection = hasUpcomingGame
@@ -194,7 +248,7 @@ export async function assembleMlbNcaafFeatured(
     },
     sections,
     refreshAfterSeconds: getRefreshAfterSeconds({
-      hasLiveGame: Boolean(tigersInput.summary?.isLive) || Boolean(msuFootball.summary?.isLive),
+      hasLiveGame: Boolean(tigersInput.summary?.isLive) || Boolean(msuSummary?.isLive),
       hasActiveSeason: true,
       awaitingEditorial,
       now: options.now ?? new Date(),

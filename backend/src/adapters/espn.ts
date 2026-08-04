@@ -160,6 +160,17 @@ function liveFromCompetition(comp: Any, teamAbbr: string): LiveSituation | undef
   if (typeof sit.onSecond === "boolean") live.onSecond = sit.onSecond;
   if (typeof sit.onThird === "boolean") live.onThird = sit.onThird;
   if (typeof sit.outs === "number") live.outs = sit.outs;
+
+  // Football situation. ESPN reports `yardsToEndzone` directly (no need to
+  // reason about which goal line `yardLine` is measured from) — best-effort,
+  // unverified against a real live game since the season hasn't started yet.
+  if (typeof sit.down === "number") live.down = sit.down;
+  if (typeof sit.distance === "number") live.distance = sit.distance;
+  if (typeof sit.yardsToEndzone === "number") live.yardsToGoal = sit.yardsToEndzone;
+  if (typeof sit.isRedZone === "boolean") live.isRedZone = sit.isRedZone;
+  if (sit.possession != null && us.team?.id != null) {
+    live.hasPossession = String(sit.possession) === String(us.team.id);
+  }
   return live;
 }
 

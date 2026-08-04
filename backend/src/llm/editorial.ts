@@ -74,6 +74,19 @@ export interface EditorialClient {
     teamKey: string,
     ctx: EditorialContext,
   ): { editorial: Editorial; pending: boolean };
+  /** Same non-blocking shape as getOrQueue, for a team with no games played
+   * yet — a season outlook instead of a last-game recap. */
+  getOrQueueOutlook(
+    teamKey: string,
+    ctx: OutlookContext,
+  ): { editorial: Editorial; pending: boolean };
+}
+
+export interface OutlookContext {
+  /** Full team name for the prompt, e.g. "Michigan State Spartans". */
+  teamName: string;
+  /** Cache scope so the outlook regenerates once a new season starts, e.g. "2026". */
+  season: string;
 }
 
 /** In-memory store (default). */
@@ -139,6 +152,17 @@ function recapPrompt(ctx: EditorialContext): string {
     `no final score, no who won or lost, no run/point totals. Focus on the ` +
     `overarching storyline for the team.${grounding} Reply with the sentence ` +
     `only — no preamble, no quotes.`
+  );
+}
+
+function outlookPrompt(ctx: OutlookContext): string {
+  return (
+    `In ${MAX_SUMMARY_LEN} characters or fewer and no more than 16 words, give a ` +
+    `brief season outlook or storyline to watch for the ${ctx.teamName} heading ` +
+    `into their upcoming season. Ground it in their actual current situation ` +
+    `(returning players, coaching changes, schedule, expectations) — nothing ` +
+    `generic that could apply to any team. Reply with the sentence only — no ` +
+    `preamble, no quotes.`
   );
 }
 
@@ -288,5 +312,48 @@ export function createEditorialClient(deps: EditorialDeps = {}): EditorialClient
     return { editorial: {}, pending: true };
   }
 
-  return { generate, getOrQueue };
+  async function generateOutlook(teamKey: string, ctx: OutlookContext): Promise<Editorial> {
+    if (!apiKey) return {};
+    const fullKey = `editorial:outlook:${teamKey}:${ctx.season}`;
+    const cached = cleanEditorial(store.get<Editorial>(fullKey));
+    if (cached) return cached;
+
+    const pending = inFlight.get(fullKey);
+    if (pending) return pending;
+
+    const promise = (async () => {
+      const summary = await piece<string>(
+        `editorial:outlook-summary:${teamKey}:${ctx.season}`,
+        async () => cleanSummary(await ask(outlookPrompt(ctx))),
+        (v) => typeof v === "string" && v.length > 0,
+      );
+      const editorial: Editorial = {};
+      if (summary) editorial.summary = summary;
+      store.set(fullKey, editorial);
+      return editorial;
+    })();
+
+    inFlight.set(fullKey, promise);
+    try {
+      return await promise;
+    } finally {
+      inFlight.delete(fullKey);
+    }
+  }
+
+  function getOrQueueOutlook(
+    teamKey: string,
+    ctx: OutlookContext,
+  ): { editorial: Editorial; pending: boolean } {
+    if (!apiKey) return { editorial: {}, pending: false };
+    const fullKey = `editorial:outlook:${teamKey}:${ctx.season}`;
+    const cached = cleanEditorial(store.get<Editorial>(fullKey));
+    if (cached) {
+      return { editorial: cached, pending: false };
+    }
+    void generateOutlook(teamKey, ctx).catch(() => {});
+    return { editorial: {}, pending: true };
+  }
+
+  return { generate, getOrQueue, getOrQueueOutlook };
 }

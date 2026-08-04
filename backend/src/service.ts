@@ -52,6 +52,10 @@ export interface BuildLiveOptions {
   kalshiOdds?: KalshiOddsAdapter;
   /** AP rank + real form for the Big Ten table, for the workshop MLB/NCAAF layout. */
   ncaafExtras?: NcaafExtrasAdapter;
+  /** Debug: inject a synthetic live MSU game into the workshop MLB/NCAAF
+   * layout, so the field-position live card can be previewed before the
+   * season actually starts. */
+  mockNcaafLive?: boolean;
 }
 
 /** Featured services bundled separately from the per-sport adapter registry. */

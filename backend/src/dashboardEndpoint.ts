@@ -74,8 +74,16 @@ export async function resolveDashboardResponse(
   try {
     const debug = query.debug?.toLowerCase();
     const debugShowAll = debug === "all";
+    // ncaaf-live is a workshop-only variant of ncaaf debug mode: same MLB/NCAAF
+    // combined layout, but with a synthetic live MSU game injected so the
+    // field-position live card can be previewed before the season starts.
+    const mockNcaafLive = debug === "ncaaf-live";
     const debugSports =
-      debug && DEBUG_SPORTS.includes(debug as Sport) ? [debug as Sport] : undefined;
+      mockNcaafLive
+        ? (["ncaaf"] as Sport[])
+        : debug && DEBUG_SPORTS.includes(debug as Sport)
+          ? [debug as Sport]
+          : undefined;
 
     const forceEditorial =
       query.forceEditorial === "1" || query.forceEditorial === "true";
@@ -87,6 +95,7 @@ export async function resolveDashboardResponse(
       ...(debugShowAll ? { debugShowAll: true } : {}),
       ...(debugSports ? { debugSports } : {}),
       ...(forceEditorial ? { forceEditorial: true } : {}),
+      ...(mockNcaafLive ? { mockNcaafLive: true } : {}),
     });
 
     return { dashboard, cacheControlSeconds: dashboard.refreshAfterSeconds };

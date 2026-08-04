@@ -151,6 +151,19 @@ export interface LiveSituation {
   onThird?: boolean;
   /** 0-3. */
   outs?: number;
+  /** Football down, 1-4. */
+  down?: number;
+  /** Football yards needed for a first down. */
+  distance?: number;
+  /** Football: yards from the offense's current spot to the end zone they're
+   * driving toward (0 = touchdown, 100 = own goal line). Direction-agnostic —
+   * always "how close to scoring", regardless of which end of the field ESPN's
+   * own yardLine convention measures from. */
+  yardsToGoal?: number;
+  /** True when the offense is inside the opponent's 20 (a common highlight). */
+  isRedZone?: boolean;
+  /** Whether the watched team currently has the ball (football). */
+  hasPossession?: boolean;
   /** Watched team's live win probability as a 0-100 percentage. */
   winProbability?: number;
   /** Brief featured player lines for live-card display, e.g. "Keith 1-2, HR". */

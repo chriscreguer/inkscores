@@ -598,6 +598,19 @@ function drawUpcomingCard(ctx, s, x, y) {
     const nextY = Math.round(cy - calendarTextHeight(String(s.next), 13) / 2);
     drawCalendarText(ctx, String(s.next), startX, nextY, 13);
   }
+
+  // Preseason outlook (LLM-generated), same wrapped-text treatment as a recap.
+  if (s.summary) {
+    const h = cardHFor(s);
+    const startY = y + 12 + logoSize + 16, lineH = 14;
+    const maxLines = Math.max(2, Math.floor((y + h - 6 - startY) / lineH));
+    const lines = wrapText(ctx, s.summary, COL_W - 24, "400 13px " + fam());
+    let sy = startY;
+    clampLines(ctx, lines, maxLines, COL_W - 24, "400 13px " + fam()).forEach((ln) => {
+      txt(ctx, ln, x + 12, sy, 13, "400", INK.black);
+      sy += lineH;
+    });
+  }
 }
 
 function drawTeamResultSummaryCard(ctx, s, x, y) {
@@ -672,23 +685,39 @@ function drawLiveBadge(ctx, x, y) {
 function drawLiveCard(ctx, s, x, y) {
   const L = s.live || {};
   drawLiveScorebug(ctx, s, x, y);
+  const isFootball = Number.isFinite(L.down);
 
   const basesSize = 38;
   const basesX = x + COL_W - 12 - basesSize - 58;
   const basesY = y + 13;
-  drawBases(ctx, basesX, basesY, basesSize, L.onFirst, L.onSecond, L.onThird, INK.black);
-
+  let dx = basesX + basesSize + 10;
   const detail = String(L.detail == null ? "" : L.detail);
-  const m = detail.match(/^(top|bottom|bot)\s+(.*)$/i);
-  let dx = basesX + basesSize + 10, rest = detail;
-  if (m) {
-    drawCaret(ctx, dx, y + 19, m[1].toLowerCase()[0] === "t", INK.black);
-    dx += 13;
-    rest = m[2];
+  let rest = detail;
+
+  if (isFootball) {
+    // Aligned with the bar's own span (not the diamond's old dx), and fit to
+    // that width, so a long "3rd & 7 · 8:42 - 3rd Quarter" can't run past the
+    // card edge the way an unbounded concatenation would.
+    const barW = x + COL_W - 12 - basesX;
+    const dd = downDistanceText(L);
+    const label = dd ? (dd + (detail ? " · " + detail : "")) : (detail || "Live");
+    const fitted = fitWidth(ctx, label, barW, "700 14px " + fam());
+    txt(ctx, fitted, basesX, y + 14, 14, "700", INK.black);
+    drawFieldPosition(ctx, basesX, y + 34, barW, L, INK.black);
+  } else {
+    drawBases(ctx, basesX, basesY, basesSize, L.onFirst, L.onSecond, L.onThird, INK.black);
+    const m = detail.match(/^(top|bottom|bot)\s+(.*)$/i);
+    if (m) {
+      drawCaret(ctx, dx, y + 19, m[1].toLowerCase()[0] === "t", INK.black);
+      dx += 13;
+      rest = m[2];
+    }
+    txt(ctx, rest || "Live", dx, y + 14, 14, "700", INK.black);
   }
-  txt(ctx, rest || "Live", dx, y + 14, 14, "700", INK.black);
-  const outs = Number(L.outs);
-  drawOuts(ctx, basesX + basesSize + 15, y + 38, Number.isFinite(outs) ? outs : 0, INK.black);
+  if (!isFootball) {
+    const outs = Number(L.outs);
+    drawOuts(ctx, basesX + basesSize + 15, y + 38, Number.isFinite(outs) ? outs : 0, INK.black);
+  }
 
   // Win probability sits near the bottom of the card; the stat lines fill the
   // space above it and may wrap to a second line when there's room.
@@ -785,6 +814,50 @@ function drawOuts(ctx, x, y, outs, color, r) {
     // Empty out: paper centre, so the border sits inside (same outer size as filled).
     if (i >= (outs||0)) { ctx.beginPath(); ctx.arc(ox, y, inner, 0, 7); ctx.fillStyle = INK.paper; ctx.fill(); }
   }
+}
+
+// "3rd & 7" (or "3rd & Goal" inside the 10). Empty when down isn't known.
+function downDistanceText(L) {
+  if (!Number.isFinite(L.down)) return "";
+  const ord = ["", "1st", "2nd", "3rd", "4th"][L.down] || (L.down + "th");
+  if (!Number.isFinite(L.distance)) return ord;
+  const dist = L.distance <= 0 ? "Goal" : ("& " + L.distance);
+  return (ord + " " + dist).trim();
+}
+
+// Live NCAAF widget: a 100-yard field-position bar with a ball marker and a
+// first-down tick, in place of the baseball diamond/outs. Yards are always
+// "distance to the end zone being driven toward" (0 = score, 100 = own goal),
+// so the bar reads the same regardless of which end ESPN's own yardLine
+// convention is measured from.
+function drawFieldPosition(ctx, x, y, w, L, color) {
+  const h = 9;
+  const toGo = Number.isFinite(L.yardsToGoal) ? Math.max(0, Math.min(100, L.yardsToGoal)) : 50;
+  const ballFrac = 1 - toGo / 100;
+
+  ctx.strokeStyle = color; ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+  // Red-zone tint: inside the opponent's 20 (the scoring end of the bar).
+  if (L.isRedZone) {
+    ctx.fillStyle = INK.red;
+    ctx.fillRect(x + w * 0.8, y, Math.ceil(w * 0.2), h);
+  }
+
+  // First-down line: a dashed tick at the yardage needed for a fresh set of downs.
+  if (Number.isFinite(L.distance)) {
+    const fdToGo = Math.max(0, toGo - L.distance);
+    const fx = x + w * (1 - fdToGo / 100);
+    ctx.strokeStyle = INK.yellow;
+    ctx.setLineDash([2, 2]);
+    ctx.beginPath(); ctx.moveTo(fx, y - 2); ctx.lineTo(fx, y + h + 2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Ball marker.
+  const bx = x + w * ballFrac;
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(bx, y + h / 2, 4, 0, 7); ctx.fill();
 }
 
 // Fill a circle with a red/paper checkerboard so it reads as "light red" on a
