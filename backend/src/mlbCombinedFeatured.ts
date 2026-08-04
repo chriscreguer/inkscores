@@ -151,7 +151,7 @@ async function buildMlbSlot(
     }
   }
 
-  const card = buildFeaturedCard(input);
+  const card: TeamCardSection = { ...buildFeaturedCard(input), cardIndex };
 
   const division = data.team.division ?? "";
   const league: "AL" | "NL" | undefined = division.startsWith("AL")
@@ -229,6 +229,7 @@ async function buildFootballSlot(
   cardIndex: 0 | 1,
   kind: "ncaaf" | "nfl",
   options: BuildLiveOptions,
+  withStandings = true,
 ): Promise<SlotResult> {
   const cardFromBase = cardSectionFor(base, data.team.key);
   if (!cardFromBase) throw new Error(`mlb combined featured: missing card for ${data.team.key}`);
@@ -260,7 +261,11 @@ async function buildFootballSlot(
   });
   const hasUpcomingGame =
     cardRaw.cardVariant === "standard" && cardRaw.next != null && cardRaw.next !== "—";
-  const card: TeamCardSection = hasUpcomingGame ? { ...cardRaw, cardVariant: "upcoming" } : cardRaw;
+  const card: TeamCardSection = hasUpcomingGame
+    ? { ...cardRaw, cardVariant: "upcoming", cardIndex }
+    : { ...cardRaw, cardIndex };
+
+  if (!withStandings) return { card, sections: [], awaitingEditorial: false };
 
   const raw = base.sections.find(
     (s): s is StandingsSection => s.type === "standings" && s.id === standingsSectionId(data.team),
@@ -324,6 +329,45 @@ export async function assembleMlbCombinedFeatured(
       : false;
   const lionsReady = lions ? isReady(lions, now, options) : false;
   const msuReady = msuFootball ? isReady(msuFootball, now, options) : false;
+
+  // Three-way: Tigers not eliminated, and BOTH Lions and MSU Football are
+  // active. Tigers keeps the left column as normal; the right column stacks
+  // Lions' card above MSU's, with only NFC North underneath (Big Ten is
+  // dropped — there's no room for two standings tables in one column, and
+  // the rule is "Lions' standings replace MSU's", not both).
+  if (tigers && !tigersEliminated && lions && lionsReady && msuFootball && msuReady) {
+    const tigersBuilt = await buildMlbSlot(base, tigers, 0, options);
+    const lionsBuilt = await buildFootballSlot(base, lions, 1, "nfl", options);
+    const msuBuilt = await buildFootballSlot(base, msuFootball, 1, "ncaaf", options, false);
+
+    const sections: DashboardSection[] = [
+      tigersBuilt.card,
+      lionsBuilt.card,
+      msuBuilt.card,
+      ...tigersBuilt.sections,
+      ...lionsBuilt.sections,
+    ];
+
+    return {
+      ...base,
+      theme: {
+        mode: base.theme?.mode ?? "epaper-color",
+        density: base.theme?.density ?? "compact",
+        layout: "team-comparison",
+        cardHeight: 132,
+      },
+      sections,
+      refreshAfterSeconds: getRefreshAfterSeconds({
+        hasLiveGame:
+          Boolean(tigers.summary?.isLive) ||
+          Boolean(lions.summary?.isLive) ||
+          Boolean(msuFootball.summary?.isLive),
+        hasActiveSeason: true,
+        awaitingEditorial: tigersBuilt.awaitingEditorial,
+        now,
+      }),
+    };
+  }
 
   // Priority-ordered eligible list; slots 1 and 2 are just the first two.
   // Cubs is only eligible when no other sport has taken over the second

@@ -86,7 +86,10 @@ const FONTS = {
 
 // Layout, device-aware. E1002 = 800x480 landscape, E1004 = 1200x1600 portrait.
 const DEVICES = {
-  e1002: { label: "E1002 800x480", W: 800, H: 480, M: 16, CARD_H: 116, FOOT_H: 16, maxCards: 2, zoom: 1 },
+  // 3 cards: the team-comparison 3-way (Tigers + Lions + MSU Football) stacks
+  // two cards in one column, needing a 3rd slot even though the grid layout
+  // still only ever shows 2.
+  e1002: { label: "E1002 800x480", W: 800, H: 480, M: 16, CARD_H: 116, FOOT_H: 16, maxCards: 3, zoom: 1 },
   e1004: { label: "E1004 1200x1600", W: 1200, H: 1600, M: 28, CARD_H: 132, FOOT_H: 22, maxCards: 6, zoom: 0.5 },
   // E1002 stood on its side: single (priority) team, bigger type, AL tables only.
   e1002p: { label: "E1002 Portrait 480x800 (1 team)", W: 480, H: 800, M: 18, CARD_H: 116, FOOT_H: 16, maxCards: 1, zoom: 1 },
@@ -1639,6 +1642,44 @@ function render() {
   const divisions = allStand.filter(s => wildcards.indexOf(s) < 0).slice(0, 2);
   const leaders = secs.find(s => s.type === "leaders");
   const msg = secs.find(s => s.type === "message");
+
+  // Column-stacked variant of team-comparison: a card's own cardIndex decides
+  // its column (not alternating i%2), and cards sharing a column stack
+  // vertically in section order — the 3-way Tigers+Lions+MSU Football view
+  // needs two cards stacked in one column, which the plain 1-card-per-column
+  // grid below can't express.
+  const stackedCards = sideBySideMock && cards.some(c => c.cardIndex === 0 || c.cardIndex === 1);
+  if (stackedCards) {
+    const leftCards = cards.filter(c => c.cardIndex !== 1);
+    const rightCards = cards.filter(c => c.cardIndex === 1);
+    const drawColumn = (list, x) => {
+      let y = M + TOP_NOTE_GAP;
+      list.forEach((c, i) => {
+        drawCard(ctx, c, x, y);
+        y += cardHFor(c) + (i < list.length - 1 ? GAP : 0);
+      });
+      return y + GAP;
+    };
+    const leftStandTop = drawColumn(leftCards, LEFT);
+    const rightStandTop = drawColumn(rightCards, RIGHT);
+
+    let leftY = leftStandTop;
+    allStand.filter(s => s.cardIndex === 0).forEach((t, i) => {
+      const h = drawStandings(ctx, t, LEFT, leftY);
+      leftY += h + (i === 0 ? 8 : 0);
+    });
+    let rightY = rightStandTop;
+    allStand.filter(s => s.cardIndex === 1).forEach((t, i) => {
+      const h = drawStandings(ctx, t, RIGHT, rightY);
+      rightY += h + (i === 0 ? 8 : 0);
+    });
+
+    ctx.textAlign = "right";
+    txt(ctx, lastDash.footer || "", W - M, 2, 11, "400", INK.black);
+    ctx.textAlign = "left";
+    quantize(ctx, W, H);
+    return;
+  }
 
   // Cards in the 2-column grid (the featured team renders richer content inside
   // its own box — same size and position).

@@ -72,18 +72,23 @@ export async function resolveDashboardResponse(
   const build = options.buildOverride ?? buildLiveDashboard;
 
   try {
-    const debug = query.debug?.toLowerCase();
-    const debugShowAll = debug === "all";
+    // Comma-separated so a multi-sport scenario (e.g. the Tigers+Lions+MSU
+    // three-way) can be forced for testing: ?debug=nfl,ncaaf.
+    const debugTokens = (query.debug ?? "")
+      .toLowerCase()
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const debugShowAll = debugTokens.includes("all");
     // ncaaf-live is a workshop-only variant of ncaaf debug mode: same MLB/NCAAF
     // combined layout, but with a synthetic live MSU game injected so the
     // field-position live card can be previewed before the season starts.
-    const mockNcaafLive = debug === "ncaaf-live";
-    const debugSports =
-      mockNcaafLive
-        ? (["ncaaf"] as Sport[])
-        : debug && DEBUG_SPORTS.includes(debug as Sport)
-          ? [debug as Sport]
-          : undefined;
+    const mockNcaafLive = debugTokens.includes("ncaaf-live");
+    const debugSportsSet = new Set<Sport>(
+      debugTokens.filter((t): t is Sport => DEBUG_SPORTS.includes(t as Sport)),
+    );
+    if (mockNcaafLive) debugSportsSet.add("ncaaf");
+    const debugSports = debugSportsSet.size ? [...debugSportsSet] : undefined;
 
     const forceEditorial =
       query.forceEditorial === "1" || query.forceEditorial === "true";

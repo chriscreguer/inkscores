@@ -112,6 +112,10 @@ export interface TeamCardSection {
   cardVariant?: "standard" | "scorebug" | "recommended" | "team-result" | "upcoming";
   /** Optional preview-only card height override. */
   cardHeight?: number;
+  /** Which team-comparison column (0=left, 1=right) this card belongs in.
+   * Cards sharing a column stack vertically in section order. Omit for the
+   * legacy one-card-per-column behavior (alternating left/right by index). */
+  cardIndex?: 0 | 1;
   /** Short monogram fallback for the logo badge, e.g. "D", "MSU". */
   badge?: string;
   /** Full-colour team logo URL for image-capable clients (e.g. the preview). */
