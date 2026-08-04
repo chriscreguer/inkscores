@@ -31,8 +31,20 @@ export const ESPN_SPORT_PATH: Record<Sport, string> = {
 const SITE_BASE = "https://site.api.espn.com/apis/site/v2/sports";
 const CORE_BASE = "https://site.api.espn.com/apis/v2/sports";
 
-export function scheduleUrl(sport: Sport, teamSlug: string): string {
-  return `${SITE_BASE}/${ESPN_SPORT_PATH[sport]}/teams/${teamSlug}/schedule`;
+/** ESPN buckets college football under an empty "Preseason" schedule (zero
+ * events) until it decides the regular season has started, even once real
+ * games are on the calendar. Ask explicitly for the regular season (or bowls
+ * in January) so a team's next game actually resolves before kickoff. */
+function ncaafScheduleQuery(now: Date): string {
+  const month = now.getUTCMonth() + 1;
+  const seasonYear = month <= 6 ? now.getUTCFullYear() - 1 : now.getUTCFullYear();
+  const seasonType = month === 1 ? 3 : 2; // 2 = regular season, 3 = postseason/bowls
+  return `?season=${seasonYear}&seasontype=${seasonType}`;
+}
+
+export function scheduleUrl(sport: Sport, teamSlug: string, now: Date = new Date()): string {
+  const base = `${SITE_BASE}/${ESPN_SPORT_PATH[sport]}/teams/${teamSlug}/schedule`;
+  return sport === "ncaaf" ? `${base}${ncaafScheduleQuery(now)}` : base;
 }
 
 export function scoreboardUrl(sport: Sport): string {
@@ -562,7 +574,7 @@ export function createEspnAdapter(config: EspnAdapterConfig): EspnAdapter {
     const schedule = await cache.getOrLoad(
       `schedule:${config.sport}:${team.espnTeamSlug}`,
       ttlMs,
-      () => fetchJson(scheduleUrl(config.sport, team.espnTeamSlug)),
+      () => fetchJson(scheduleUrl(config.sport, team.espnTeamSlug, now())),
     );
     const games = normalizeScheduleToGames(schedule, abbr, now(), timeZone);
 
