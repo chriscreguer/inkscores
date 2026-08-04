@@ -878,10 +878,14 @@ function drawFieldPosition(ctx, x, y, w, L, color) {
     ctx.setLineDash([]);
   }
 
-  // Ball marker.
+  // Ball marker: a solid vertical line (same treatment as the first-down
+  // tick, just solid instead of dashed, and heavier so it still reads as
+  // "the primary marker" against the dashed line).
   const bx = x + w * ballFrac;
-  ctx.fillStyle = color;
-  ctx.beginPath(); ctx.arc(bx, y + h / 2, 4, 0, 7); ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(bx, y - 2); ctx.lineTo(bx, y + h + 2); ctx.stroke();
+  ctx.lineWidth = 1;
 }
 
 // Fill a circle with a red/paper checkerboard so it reads as "light red" on a
