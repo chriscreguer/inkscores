@@ -692,6 +692,7 @@ function drawLiveScorebug(ctx, s, x, y) {
   const rightX = sx + logoSize + gap + scoreW + gap;
   if (watchedHome) drawTeamLogoMark(ctx, s, rightX, sy, logoSize);
   else drawOpponentMark(ctx, opponent, rightX, sy, logoSize);
+  return rightX + logoSize;
 }
 
 function drawLiveBadge(ctx, x, y) {
@@ -706,7 +707,7 @@ function drawLiveBadge(ctx, x, y) {
 
 function drawLiveCard(ctx, s, x, y) {
   const L = s.live || {};
-  drawLiveScorebug(ctx, s, x, y);
+  const scorebugEnd = drawLiveScorebug(ctx, s, x, y);
   const isFootball = Number.isFinite(L.down);
 
   const basesSize = 38;
@@ -717,15 +718,16 @@ function drawLiveCard(ctx, s, x, y) {
   let rest = detail;
 
   if (isFootball) {
-    // Aligned with the bar's own span (not the diamond's old dx), and fit to
-    // that width, so a long "3rd & 7 · 8:42 - 3rd Quarter" can't run past the
-    // card edge the way an unbounded concatenation would.
-    const barW = x + COL_W - 12 - basesX;
+    // Starts right after the scorebug's own logos/score (not the diamond's
+    // cramped 96px slot), so the full "3rd & 7 · 8:42 - 3rd Quarter" usually
+    // fits without truncating; fitWidth still guards the rare long case.
+    const barX = scorebugEnd + 14;
+    const barW = x + COL_W - 12 - barX;
     const dd = downDistanceText(L);
     const label = dd ? (dd + (detail ? " · " + detail : "")) : (detail || "Live");
     const fitted = fitWidth(ctx, label, barW, "700 14px " + fam());
-    txt(ctx, fitted, basesX, y + 14, 14, "700", INK.black);
-    drawFieldPosition(ctx, basesX, y + 34, barW, L, INK.black);
+    txt(ctx, fitted, barX, y + 14, 14, "700", INK.black);
+    drawFieldPosition(ctx, barX, y + 34, barW, L, INK.black);
   } else {
     drawBases(ctx, basesX, basesY, basesSize, L.onFirst, L.onSecond, L.onThird, INK.black);
     const m = detail.match(/^(top|bottom|bot)\s+(.*)$/i);
