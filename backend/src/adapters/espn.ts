@@ -47,8 +47,17 @@ export function scheduleUrl(sport: Sport, teamSlug: string, now: Date = new Date
   return sport === "ncaaf" ? `${base}${ncaafScheduleQuery(now)}` : base;
 }
 
-export function scoreboardUrl(sport: Sport): string {
-  return `${SITE_BASE}/${ESPN_SPORT_PATH[sport]}/scoreboard`;
+/** `dateYmd` ("YYYYMMDD") scopes the scoreboard to one day. Without it, ESPN
+ * doesn't reliably default to "today" for weekly-cadence sports (NFL/NCAAF)
+ * — with no games happening today, it was observed returning the upcoming
+ * game week instead (e.g. a team's opener a month out), which silently
+ * broke hasGameToday/findTeamEventInScoreboard for exactly the sports that
+ * matter most for that flag (daily-cadence MLB never showed the gap, since
+ * "today" and "the next games" are the same thing there). Always pass the
+ * date for a "this team's game today" lookup. */
+export function scoreboardUrl(sport: Sport, dateYmd?: string): string {
+  const base = `${SITE_BASE}/${ESPN_SPORT_PATH[sport]}/scoreboard`;
+  return dateYmd ? `${base}?dates=${dateYmd}` : base;
 }
 
 export function summaryUrl(sport: Sport, eventId: string): string {
@@ -654,11 +663,12 @@ export function createEspnAdapter(config: EspnAdapterConfig): EspnAdapter {
     // shared fetch for all teams) is the real-time source of truth, so let it
     // decide whether the game is live or finished.
     let sb: Any;
+    const todayYmd = ymdInTz(now(), timeZone).replace(/-/g, "");
     try {
       sb = await cache.getOrLoad(
-        `scoreboard:${config.sport}`,
+        `scoreboard:${config.sport}:${todayYmd}`,
         CACHE_TTLS.liveGame,
-        () => fetchJson(scoreboardUrl(config.sport)),
+        () => fetchJson(scoreboardUrl(config.sport, todayYmd)),
       );
     } catch {
       // scoreboard is best-effort; fall back to the schedule-derived state

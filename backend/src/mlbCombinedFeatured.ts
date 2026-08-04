@@ -1,6 +1,6 @@
 import { buildFeaturedCard, withFormColumn, type FeaturedTeamInput } from "./featured.js";
 import { formatPlayoffPct } from "./adapters/kalshiOdds.js";
-import { getRefreshAfterSeconds, isTeamActive } from "./activeSeasons.js";
+import { getRefreshAfterSeconds, daysBetween } from "./activeSeasons.js";
 import type { TeamData } from "./dashboardBuilder.js";
 import type { BuildLiveOptions } from "./service.js";
 import type {
@@ -8,7 +8,6 @@ import type {
   DashboardSection,
   StandingsSection,
   TeamCardSection,
-  TeamContext,
   TeamSummary,
   WatchedTeam,
 } from "./types.js";
@@ -66,25 +65,25 @@ function mockMsuLiveSummary(team: WatchedTeam): TeamSummary {
   };
 }
 
-function contextFor(now: Date, summary?: TeamSummary): TeamContext {
-  return {
-    now,
-    hasLiveGame: summary?.isLive,
-    hasPlayoffOrTournamentContext: summary?.hasPlayoffContext,
-    ...(summary?.lastGame ? { lastGame: { date: summary.lastGame.date } } : {}),
-    ...(summary?.nextGame ? { nextGame: { date: summary.nextGame.date } } : {}),
-  };
-}
-
-/** Same "is this team actually in season" signal the plain dashboard uses —
- * independent of WatchedTeam.debugOnly, which only gates the plain view.
- * Also honors debugShowAll/debugSports so ?debug=nfl can force Lions into
- * the rotation for testing before it's genuinely active, same as the plain
- * dashboard's own isActive() does. */
+/** Deliberately stricter than the plain dashboard's isTeamActive: no 14-day
+ * advance window, no broad-season-window fallback (that's what activated MSU
+ * Football on Aug 1 before it had ever played a game — the original bug).
+ * Ready means there's an actual game to show: live now, playing today, or
+ * played recently enough that the last result is still the current news
+ * (10 days comfortably bridges a weekly CFB/NFL schedule without staying
+ * "on" through the following offseason). Also honors debugShowAll/
+ * debugSports so ?debug=nfl can force Lions into the rotation for testing. */
 function isReady(data: TeamData, now: Date, options: BuildLiveOptions): boolean {
   if (options.debugShowAll) return true;
   if (options.debugSports?.includes(data.team.sport)) return true;
-  return isTeamActive(data.team, contextFor(now, data.summary));
+  const summary = data.summary;
+  if (!summary) return false;
+  if (summary.isLive || summary.hasGameToday) return true;
+  if (summary.lastGame) {
+    const last = new Date(summary.lastGame.date);
+    if (last <= now && daysBetween(last, now) <= 10) return true;
+  }
+  return false;
 }
 
 function cardSectionFor(base: Dashboard, teamKey: string): TeamCardSection | undefined {

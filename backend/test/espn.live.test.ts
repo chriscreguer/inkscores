@@ -7,6 +7,8 @@ import {
   topPlayersFromFootballSummary,
   liveDetailsFromScoreboard,
   winProbabilityFromSummary,
+  scoreboardUrl,
+  findTeamEventInScoreboard,
 } from "../src/adapters/espn.js";
 
 function fixture(name: string): any {
@@ -187,5 +189,44 @@ describe("topPlayersFromFootballSummary", () => {
   it("returns [] instead of throwing when category keys don't match", () => {
     const wrongKeys = { boxscore: { players: [{ team: { abbreviation: "MSU" }, statistics: [{ name: "passing", keys: ["unexpected"], athletes: [] }] }] } };
     expect(topPlayersFromFootballSummary(wrongKeys, "MSU")).toEqual([]);
+  });
+});
+
+describe("scoreboardUrl", () => {
+  it("appends ?dates=YYYYMMDD when given a date", () => {
+    expect(scoreboardUrl("ncaaf", "20260804")).toBe(
+      "https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?dates=20260804",
+    );
+  });
+
+  it("omits the query string entirely without a date", () => {
+    expect(scoreboardUrl("mlb")).toBe(
+      "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard",
+    );
+  });
+});
+
+describe("findTeamEventInScoreboard", () => {
+  // Regression: an unscoped scoreboard fetch was observed returning a whole
+  // upcoming game week (not just today) for weekly-cadence sports, so a team
+  // with nothing happening today still matched a game a month out. Scoping
+  // the fetch via scoreboardUrl's dates param is the actual fix (this just
+  // documents that the matcher itself has no date awareness — it trusts
+  // whatever payload it's given, so callers must pass an already-scoped one).
+  it("matches whatever event payload it's given, regardless of date", () => {
+    const raw = {
+      events: [
+        {
+          date: "2026-09-05T00:00Z",
+          competitions: [{ competitors: [{ team: { abbreviation: "MSU" } }] }],
+        },
+      ],
+    };
+    expect(findTeamEventInScoreboard(raw, "MSU")).toBeDefined();
+  });
+
+  it("returns undefined when the team has no event in the given payload", () => {
+    const raw = { events: [{ competitions: [{ competitors: [{ team: { abbreviation: "OSU" } }] }] }] };
+    expect(findTeamEventInScoreboard(raw, "MSU")).toBeUndefined();
   });
 });
