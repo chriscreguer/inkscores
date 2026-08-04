@@ -109,7 +109,7 @@ export interface TeamCardSection {
   /** Last-game opponent abbreviation used in compact scorebug layouts. */
   scorebugOpponent?: string;
   /** Visual treatment hint for renderers. */
-  cardVariant?: "standard" | "scorebug" | "recommended" | "team-result";
+  cardVariant?: "standard" | "scorebug" | "recommended" | "team-result" | "upcoming";
   /** Optional preview-only card height override. */
   cardHeight?: number;
   /** Short monogram fallback for the logo badge, e.g. "D", "MSU". */

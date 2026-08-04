@@ -18,10 +18,12 @@ import type {
  * ?debug=ncaaf while this design is being built out — see WatchedTeam.debugOnly.
  */
 
-/** Prefix a ranked team's abbreviation with its AP rank, e.g. "OSU" -> "#5 OSU". */
+/** Suffix a ranked team's abbreviation with its AP rank, e.g. "OSU" -> "OSU #5".
+ * The renderer (preview.ts) recognises the trailing "#N" and draws it smaller
+ * and bold, after the name, rather than as part of the name itself. */
 function rankedName(abbr: string, ranksByAbbr: Record<string, number>): string {
   const rank = ranksByAbbr[abbr];
-  return rank ? `#${rank} ${abbr}` : abbr;
+  return rank ? `${abbr} #${rank}` : abbr;
 }
 
 function enrichBigTenStandings(
@@ -32,7 +34,9 @@ function enrichBigTenStandings(
     playoffPctByAbbr: Record<string, number>;
   },
 ): StandingsSection {
-  const columns = [...section.columns, "Form", "Playoff %"];
+  // "L5"/"Odds" match the exact column-header convention the AL Central/AL
+  // Playoff tables already use (L10 form dots, "Odds" for make-playoffs %).
+  const columns = [...section.columns, "L5", "Odds"];
   const rows = section.rows.map((row) => {
     const abbr = String(row[1] ?? "");
     const form = data.formByAbbr[abbr] || "-";
@@ -115,11 +119,23 @@ export async function assembleMlbNcaafFeatured(
   }
 
   const tigersFeaturedCard = buildFeaturedCard(tigersInput);
-  const msuFeaturedCard = buildFeaturedCard({
+  const msuFeaturedCardRaw = buildFeaturedCard({
     card: msuCard,
     team: msuFootball.team,
     ...(msuFootball.summary ? { summary: msuFootball.summary } : {}),
   });
+  // No completed game yet (buildFeaturedCard falls back to "standard", which
+  // shows a large title + bottom-left next game). Once there's a real next
+  // game, match the Tigers scorebug card's convention instead: no title text,
+  // next game styled/positioned top-right like the scorebug's next-game slot.
+  const hasUpcomingGame =
+    msuFeaturedCardRaw.cardVariant === "standard" &&
+    !msuFeaturedCardRaw.summary &&
+    msuFeaturedCardRaw.next != null &&
+    msuFeaturedCardRaw.next !== "—";
+  const msuFeaturedCard: TeamCardSection = hasUpcomingGame
+    ? { ...msuFeaturedCardRaw, cardVariant: "upcoming" }
+    : msuFeaturedCardRaw;
 
   // Real AL wild-card table (B-Ref odds) + last-10 form, same sources as the
   // MLB-only Featured path, narrowed to AL/Tigers.

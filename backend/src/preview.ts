@@ -371,6 +371,11 @@ function drawCard(ctx, s, x, y) {
     return;
   }
 
+  if (String(s.cardVariant || "") === "upcoming" && !(s.status === "live" && s.live)) {
+    drawUpcomingCard(ctx, s, x, y);
+    return;
+  }
+
   if (s.status === "live" && s.live) {
     drawLiveCard(ctx, s, x, y);
     return;
@@ -575,6 +580,23 @@ function drawScorebugSummaryCard(ctx, s, x, y, variant) {
 
   if (hasHC) {
     drawHotCold(ctx, x, hcTop, s);
+  }
+}
+
+// No game played yet, but a game is on the schedule (e.g. preseason): just the
+// team logo (it carries identity, same as the scorebug convention — no title
+// text) with the next game styled and positioned exactly like the scorebug's
+// top-right next-game slot, just anchored to a single centred logo instead of
+// a logo/score/logo row.
+function drawUpcomingCard(ctx, s, x, y) {
+  const logoSize = LOGOS.size || 44;
+  drawTeamLogoMark(ctx, s, x + 12, y + 12, logoSize);
+
+  if (s.next != null) {
+    const cy = y + 12 + logoSize / 2;
+    const startX = x + COL_W - 12 - calendarTextWidth(ctx, String(s.next), 13);
+    const nextY = Math.round(cy - calendarTextHeight(String(s.next), 13) / 2);
+    drawCalendarText(ctx, String(s.next), startX, nextY, 13);
   }
 }
 
@@ -989,10 +1011,20 @@ function drawStandings(ctx, s, x, y) {
     const color = on ? acc : INK.black;
     for (let k = 0; k < r.length && k < COLX.length; k++) {
       const head = String(cols[k] || "").toLowerCase();
+      const weight = on ? "700" : "400";
+      const rankMatch = head === "team" ? /^(.*)\s(#\d+)$/.exec(String(r[k] ?? "")) : null;
       if (head === "l5" || head === "l10" || head === "form") {
         drawForm(ctx, x + 6 + COLX[k], ry, r[k]);
+      } else if (rankMatch) {
+        // Rank suffix (e.g. "USC #20") renders smaller and bold, after the
+        // name, rather than as part of the team name itself.
+        const cellX = x + 6 + COLX[k];
+        txt(ctx, rankMatch[1], cellX, ry, 15, weight, color);
+        ctx.font = weight + " 15px " + fam();
+        const nameW = ctx.measureText(rankMatch[1]).width;
+        txt(ctx, rankMatch[2], cellX + nameW + 4, ry + 2, 11, "700", color);
       } else {
-        txt(ctx, r[k] == null ? "" : r[k], x + 6 + COLX[k], ry, 15, on ? "700" : "400", color);
+        txt(ctx, r[k] == null ? "" : r[k], x + 6 + COLX[k], ry, 15, weight, color);
       }
     }
     ry += rowH;
