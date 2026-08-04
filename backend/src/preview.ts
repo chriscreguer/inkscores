@@ -1012,11 +1012,11 @@ function drawStandings(ctx, s, x, y) {
     for (let k = 0; k < r.length && k < COLX.length; k++) {
       const head = String(cols[k] || "").toLowerCase();
       const weight = on ? "700" : "400";
-      const rankMatch = head === "team" ? /^(.*)\s(#\d+)$/.exec(String(r[k] ?? "")) : null;
+      const rankMatch = head === "team" ? /^(.*)\s(\d+)$/.exec(String(r[k] ?? "")) : null;
       if (head === "l5" || head === "l10" || head === "form") {
         drawForm(ctx, x + 6 + COLX[k], ry, r[k]);
       } else if (rankMatch) {
-        // Rank suffix (e.g. "USC #20") renders smaller and bold, after the
+        // Rank suffix (e.g. "USC 20") renders smaller and bold, after the
         // name, rather than as part of the team name itself.
         const cellX = x + 6 + COLX[k];
         txt(ctx, rankMatch[1], cellX, ry, 15, weight, color);

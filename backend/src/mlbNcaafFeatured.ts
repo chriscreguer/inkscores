@@ -18,12 +18,12 @@ import type {
  * ?debug=ncaaf while this design is being built out — see WatchedTeam.debugOnly.
  */
 
-/** Suffix a ranked team's abbreviation with its AP rank, e.g. "OSU" -> "OSU #5".
- * The renderer (preview.ts) recognises the trailing "#N" and draws it smaller
+/** Suffix a ranked team's abbreviation with its bare AP rank, e.g. "OSU" -> "OSU 5".
+ * The renderer (preview.ts) recognises the trailing number and draws it smaller
  * and bold, after the name, rather than as part of the name itself. */
 function rankedName(abbr: string, ranksByAbbr: Record<string, number>): string {
   const rank = ranksByAbbr[abbr];
-  return rank ? `${abbr} #${rank}` : abbr;
+  return rank ? `${abbr} ${rank}` : abbr;
 }
 
 function enrichBigTenStandings(
