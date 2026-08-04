@@ -24,7 +24,7 @@ function mockMsuLiveSummary(team: WatchedTeam): TeamSummary {
     record: "3-2",
     live: {
       score: "17-14",
-      opponent: "OSU",
+      opponent: "MICH",
       homeAway: "home",
       detail: "8:42 - 3rd",
       down: 3,

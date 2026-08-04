@@ -222,6 +222,20 @@ const TEAM_LOGO_FILES = {
   TEX: "/preview/team-logos/tex.png",
   TOR: "/preview/team-logos/tor.png",
   WSH: "/preview/team-logos/wsh.png",
+  // MSU football's 2026 opponents, so the live/final scorebug shows a real
+  // logo instead of the bordered-text fallback badge.
+  TOL: "/preview/team-logos/tol.png",
+  EMU: "/preview/team-logos/emu.png",
+  ND: "/preview/team-logos/nd.png",
+  NEB: "/preview/team-logos/neb.png",
+  WIS: "/preview/team-logos/wis.png",
+  ILL: "/preview/team-logos/ill.png",
+  NU: "/preview/team-logos/nu.png",
+  UCLA: "/preview/team-logos/ucla.png",
+  MICH: "/preview/team-logos/mich.png",
+  WASH: "/preview/team-logos/wash.png",
+  ORE: "/preview/team-logos/ore.png",
+  RUTG: "/preview/team-logos/rutg.png",
 };
 
 function logoVisualScaleFor(key) {
@@ -300,13 +314,20 @@ function drawOpponentMark(ctx, abbr, x, y, size) {
     return;
   }
 
+  // save/restore, not just resetting textAlign/baseline back: this used to
+  // leave the font at "700 14px" for whoever drew next. When the opponent has
+  // no raster logo (any team without a preloaded badge — most non-MLB
+  // opponents), that silently shrank the score text drawn right after it in
+  // drawScorebug/drawLiveScorebug, even though its width had already been
+  // measured at the intended (larger) size.
+  ctx.save();
   ctx.strokeStyle = INK.black; ctx.lineWidth = 1;
   ctx.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
   ctx.fillStyle = INK.paper; ctx.fillRect(x + 1, y + 1, size - 2, size - 2);
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillStyle = INK.black; ctx.font = "700 14px " + fam();
   ctx.fillText(String(abbr || "?").toUpperCase().slice(0, 3), x + size / 2, y + size / 2 + 1);
-  ctx.textAlign = "left"; ctx.textBaseline = "top";
+  ctx.restore();
 }
 
 function drawRasterLogoImage(ctx, img, key, x, y, size) {
@@ -346,11 +367,12 @@ function drawTeamLogoMark(ctx, s, x, y, size) {
     return;
   }
   const cx = x + size / 2, cy = y + size / 2;
+  ctx.save();
   ctx.fillStyle = accentInk(s.accent); ctx.beginPath(); ctx.arc(cx, cy, size / 2 - 1, 0, 7); ctx.fill();
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillStyle = INK.paper; ctx.font = "700 18px " + fam();
   ctx.fillText((s.badge || (s.title||"?")[0]).toUpperCase(), cx, cy + 1);
-  ctx.textAlign = "left"; ctx.textBaseline = "top";
+  ctx.restore();
 }
 
 function drawCard(ctx, s, x, y) {
