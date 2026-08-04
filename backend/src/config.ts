@@ -43,12 +43,10 @@ export const WATCHED_TEAMS: WatchedTeam[] = [
     accent: "blue",
     badge: "L",
     logoUrl: "https://a.espncdn.com/i/teamlogos/nfl/500/det.png",
-    // NFL preseason activates this via isTeamActive's "next game within 14
-    // days" branch well before Sept 1 — same MLB-only-breaking issue MSU
-    // Football hit (see mlbNcaafFeatured.ts). Keep off the live device until
-    // there's a real plan for how a 3rd/4th simultaneously-active sport
-    // should be prioritized, not just whichever one happens to activate first.
-    debugOnly: true,
+    // Rotation logic lives in mlbCombinedFeatured.ts: Cubs steps aside for
+    // Lions once Lions is genuinely active (gameday-based, not a calendar
+    // guess — see isReady there), Lions wins over MSU Football when both
+    // are active, and both show alongside Tigers pre-elimination.
   },
   {
     key: "pistons",
@@ -62,8 +60,11 @@ export const WATCHED_TEAMS: WatchedTeam[] = [
     accent: "red",
     badge: "P",
     logoUrl: "https://a.espncdn.com/i/teamlogos/nba/500/det.png",
-    // Same reasoning as Lions above — NBA season starts in October but the
-    // same premature-activation risk applies.
+    // Still gated: mlbCombinedFeatured.ts has no NBA branch, so Pistons has
+    // no real card/standings treatment yet — removing this before that
+    // exists would reproduce the exact bug this whole rotation system was
+    // built to fix, just for Pistons instead of MSU. Build the NBA slot
+    // before removing this.
     debugOnly: true,
   },
   {
@@ -78,10 +79,6 @@ export const WATCHED_TEAMS: WatchedTeam[] = [
     accent: "green",
     badge: "S",
     logoUrl: "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png",
-    // The combined MLB/NCAAF layout is still being designed (workshop via
-    // /preview?debug=ncaaf). Keep it off the live device so it doesn't knock
-    // the dashboard out of MLB-only Featured mode before it's ready.
-    debugOnly: true,
   },
   {
     key: "msu-basketball",

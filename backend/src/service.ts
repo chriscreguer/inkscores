@@ -132,12 +132,15 @@ export async function buildLiveDashboard(
     ...(options.debugSports ? { debugSports: options.debugSports } : {}),
   });
 
-  // 3b. Workshop-only: MLB/NFL/NCAAF combined Featured layout that rotates
-  //     the second (and eventually first) card slot across whichever of
-  //     Tigers/Cubs/Lions/MSU Football is actually in season. Reachable via
-  //     ?debug=ncaaf or ?debug=nfl while Lions/MSU Football stay behind
-  //     WatchedTeam.debugOnly. Falls through to normal handling on failure.
-  if (options.debugSports?.includes("ncaaf") || options.debugSports?.includes("nfl")) {
+  // 3b. The real, live layout: rotates the two card slots across whichever
+  //     of Tigers/Cubs/Lions/MSU Football is actually in season (see
+  //     mlbCombinedFeatured.ts for the exact rules — gameday-based
+  //     readiness, Lions over MSU Football, Tigers drops out once
+  //     mathematically eliminated). Defaults to plain Tigers + Cubs when
+  //     neither Lions nor MSU Football is ready, so this supersedes the old
+  //     MLB-only isFeaturedEligible path below, which now only runs as a
+  //     fallback if this throws for some unexpected reason.
+  if (options.mlbStats) {
     try {
       return await assembleMlbCombinedFeatured(dashboard, teamData, options);
     } catch {
@@ -145,10 +148,11 @@ export async function buildLiveDashboard(
     }
   }
 
-  // 4. The default for an MLB-only view is the rich Featured layout: scorebug
-  //    cards with an LLM recap + hot/cold, division and (real, Stats API)
-  //    playoff tables stacked per team. Falls back to the plain MLB view if the
-  //    featured services aren't wired or anything in the enrichment fails.
+  // 4. Fallback MLB-only Featured layout (see 3b above for why this is no
+  //    longer the primary path): scorebug cards with an LLM recap + hot/
+  //    cold, division and (real, Stats API) playoff tables. Falls back to
+  //    the plain MLB view if the featured services aren't wired or anything
+  //    in the enrichment fails.
   if (options.mlbStats && isFeaturedEligible(dashboard)) {
     try {
       return await assembleFeaturedDashboard(dashboard, teamData, options);
