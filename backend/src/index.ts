@@ -34,6 +34,7 @@ import nbaCbbMock from "./mock/dashboard.nba-cbb.json" with { type: "json" };
 import winterMock from "./mock/dashboard.winter.json" with { type: "json" };
 import featuredMock from "./mock/dashboard.featured.json" with { type: "json" };
 import featuredCubsIdeaMock from "./mock/dashboard.featured-cubs-idea.json" with { type: "json" };
+import featuredTigersStatsIdeaMock from "./mock/dashboard.featured-tigers-stats-idea.json" with { type: "json" };
 import logos from "./logos.json" with { type: "json" };
 
 // Load backend/.env (e.g. OPENAI_API_KEY) if present, before any service reads
@@ -62,6 +63,7 @@ const MOCKS: Record<string, Dashboard> = {
   winter: winterMock as unknown as Dashboard,
   featured: featuredMock as unknown as Dashboard,
   "featured-cubs-idea": featuredCubsIdeaMock as unknown as Dashboard,
+  "featured-tigers-stats-idea": featuredTigersStatsIdeaMock as unknown as Dashboard,
 };
 
 function loadMock(name: string): Dashboard | undefined {

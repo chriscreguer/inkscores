@@ -16,11 +16,17 @@ constexpr int kLandscapeHeight = 480;
 constexpr int kPortraitWidth = 480;
 constexpr int kPortraitHeight = 800;
 
-String imageUrl(bool portraitMode) {
+String imageUrl(bool portraitMode, bool showTigersStats) {
   String url = DASHBOARD_IMAGE_URL;
-  if (!portraitMode) return url;
-  url += url.indexOf('?') >= 0 ? "&" : "?";
-  url += "device=e1002p&view=portrait-live-state";
+  if (portraitMode) {
+    url += url.indexOf('?') >= 0 ? "&" : "?";
+    url += "device=e1002p&view=portrait-live-state";
+    return url;
+  }
+  if (showTigersStats) {
+    url += url.indexOf('?') >= 0 ? "&" : "?";
+    url += "panel=tigers-stats";
+  }
   return url;
 }
 
@@ -49,6 +55,7 @@ PreviewImageStatus fetchPreviewImage(
     size_t& length,
     uint32_t& refreshSeconds,
     bool portraitMode,
+    bool showTigersStats,
     int& width,
     int& height) {
   data = nullptr;
@@ -67,7 +74,7 @@ PreviewImageStatus fetchPreviewImage(
   const char* headerKeys[] = {"X-Refresh-After-Seconds", "X-Width", "X-Height"};
   http.collectHeaders(headerKeys, 3);
 
-  const String url = imageUrl(portraitMode);
+  const String url = imageUrl(portraitMode, showTigersStats);
   if (!http.begin(client, url)) {
     Serial0.println("image http.begin failed");
     return PreviewImageStatus::Failed;

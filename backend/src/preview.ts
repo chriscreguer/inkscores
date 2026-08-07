@@ -42,6 +42,7 @@ const MODES = [
   ["MLB", "mock=mlb"],
   ["Featured", "mock=featured"],
   ["Cubs idea", "mock=featured-cubs-idea"],
+  ["Tigers stats idea", "mock=featured-tigers-stats-idea"],
   ["MLB live", "mock=live"],
   ["NBA", "mock=nba"],
   ["NFL", "mock=nfl"],
@@ -1215,6 +1216,35 @@ function drawStandings(ctx, s, x, y) {
   return ry - y;  // height used, so callers can stack below
 }
 
+// Compact player-stats table (Name + 4 right-aligned stat columns), for the
+// Tigers hitting/starters/pen panel. Denser than drawStandings (18px rows vs
+// 20px, no rank column, no dividers) — needed to fit 9+5+5 rows in one column.
+const STATS_COL_RIGHT = [196, 254, 312, 372];
+function drawStatsTable(ctx, s, x, y) {
+  txt(ctx, s.title, x, y, 13, "700", INK.black);
+  const cols = s.columns || [];
+  ctx.textAlign = "right";
+  for (let k = 1; k < cols.length && k - 1 < STATS_COL_RIGHT.length; k++) {
+    txt(ctx, cols[k], x + STATS_COL_RIGHT[k - 1], y + 2, 10, "400", INK.black);
+  }
+  ctx.textAlign = "left";
+  ctx.strokeStyle = INK.black; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x, y + 16.5); ctx.lineTo(x + COL_W, y + 16.5); ctx.stroke();
+  const rows = s.rows || []; const rowH = 18;
+  let ry = y + 20;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    txt(ctx, r[0] == null ? "" : r[0], x, ry, 12, "400", INK.black);
+    ctx.textAlign = "right";
+    for (let k = 1; k < r.length && k - 1 < STATS_COL_RIGHT.length; k++) {
+      txt(ctx, r[k] == null ? "" : r[k], x + STATS_COL_RIGHT[k - 1], ry, 12, "400", INK.black);
+    }
+    ctx.textAlign = "left";
+    ry += rowH;
+  }
+  return ry - y;
+}
+
 // Compact division-leaders strip: a top rule, a label, then "GROUP TEAM" pairs.
 function drawLeaders(ctx, s, x, y, w) {
   ctx.strokeStyle = INK.black; ctx.lineWidth = 1;
@@ -1669,9 +1699,11 @@ function render() {
       leftY += h + (i === 0 ? 8 : 0);
     });
     let rightY = rightStandTop;
-    allStand.filter(s => s.cardIndex === 1).forEach((t, i) => {
-      const h = drawStandings(ctx, t, RIGHT, rightY);
-      rightY += h + (i === 0 ? 8 : 0);
+    const rightTablesStacked = allStand.filter(s => s.cardIndex === 1);
+    rightTablesStacked.forEach((t, i) => {
+      const isStatsTable = /^tigers-stats-/.test(String(t.id || ""));
+      const h = isStatsTable ? drawStatsTable(ctx, t, RIGHT, rightY) : drawStandings(ctx, t, RIGHT, rightY);
+      rightY += h + (isStatsTable ? (i < rightTablesStacked.length - 1 ? 6 : 0) : (i === 0 ? 8 : 0));
     });
 
     ctx.textAlign = "right";

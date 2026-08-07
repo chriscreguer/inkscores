@@ -13,6 +13,9 @@ export interface DashboardQuery {
   debug?: string;
   /** Debug: "1"/"true" forces a fresh editorial recap, bypassing the cache. */
   forceEditorial?: string;
+  /** Left-button landscape toggle: "tigers-stats" swaps the Cubs slot for the
+   * Tigers hitting/starters/pen stats panel. */
+  panel?: string;
 }
 
 export interface ResolveOptions {
@@ -93,6 +96,7 @@ export async function resolveDashboardResponse(
 
     const forceEditorial =
       query.forceEditorial === "1" || query.forceEditorial === "true";
+    const tigersStatsPanel = query.panel === "tigers-stats";
 
     const dashboard = await build({
       now,
@@ -102,6 +106,7 @@ export async function resolveDashboardResponse(
       ...(debugSports ? { debugSports } : {}),
       ...(forceEditorial ? { forceEditorial: true } : {}),
       ...(mockNcaafLive ? { mockNcaafLive: true } : {}),
+      ...(tigersStatsPanel ? { tigersStatsPanel: true } : {}),
     });
 
     return {

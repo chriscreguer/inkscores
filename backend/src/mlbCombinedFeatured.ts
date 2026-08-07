@@ -308,6 +308,23 @@ interface Slot {
   kind: "mlb" | "nfl" | "ncaaf";
 }
 
+/** Left-button landscape toggle: hitting/starters/pen stat tables for the
+ * given team (cardIndex 1, no card), sourced from Baseball-Reference. Best-
+ * effort — an empty array on any failure leaves the slot blank rather than
+ * failing the whole dashboard. */
+async function buildTigersStatsSlot(
+  data: TeamData,
+  options: BuildLiveOptions,
+): Promise<DashboardSection[]> {
+  if (!options.brefTeamStats) return [];
+  try {
+    const abbr = data.team.espnTeamSlug.toUpperCase();
+    return await options.brefTeamStats.getTeamStatsTables(abbr, data.team.accent);
+  } catch {
+    return [];
+  }
+}
+
 export async function assembleMlbCombinedFeatured(
   base: Dashboard,
   teamData: TeamData[],
@@ -333,7 +350,7 @@ export async function assembleMlbCombinedFeatured(
 
   // Three-way: Tigers not eliminated, and BOTH Lions and MSU Football are
   // active. Tigers keeps the left column as normal; the right column stacks
-  // Lions' card above MSU's, with only NFC North underneath (Big Ten is
+  // MSU's card above Lions', with only NFC North underneath (Big Ten is
   // dropped — there's no room for two standings tables in one column, and
   // the rule is "Lions' standings replace MSU's", not both).
   if (tigers && !tigersEliminated && lions && lionsReady && msuFootball && msuReady) {
@@ -343,8 +360,8 @@ export async function assembleMlbCombinedFeatured(
 
     const sections: DashboardSection[] = [
       tigersBuilt.card,
-      lionsBuilt.card,
       msuBuilt.card,
+      lionsBuilt.card,
       ...tigersBuilt.sections,
       ...lionsBuilt.sections,
     ];
@@ -372,12 +389,25 @@ export async function assembleMlbCombinedFeatured(
 
   // Priority-ordered eligible list; slots 1 and 2 are just the first two.
   // Cubs is only eligible when no other sport has taken over the second
-  // slot — the moment Lions or MSU Football is ready, Cubs drops out.
+  // slot — the moment Lions or MSU Football is ready, Cubs drops out. The
+  // left-button stats-panel toggle takes the same priority as Cubs (only
+  // meaningful in the plain Tigers-vs-Cubs case) and wins over it when on.
+  const tigersStatsEligible = Boolean(
+    tigers &&
+      !tigersEliminated &&
+      !lionsReady &&
+      !msuReady &&
+      options.tigersStatsPanel &&
+      options.brefTeamStats,
+  );
+
   const eligible: Slot[] = [];
   if (tigers && !tigersEliminated) eligible.push({ data: tigers, kind: "mlb" });
   if (lions && lionsReady) eligible.push({ data: lions, kind: "nfl" });
   if (msuFootball && msuReady) eligible.push({ data: msuFootball, kind: "ncaaf" });
-  if (cubs && !lionsReady && !msuReady) eligible.push({ data: cubs, kind: "mlb" });
+  if (cubs && !lionsReady && !msuReady && !tigersStatsEligible) {
+    eligible.push({ data: cubs, kind: "mlb" });
+  }
 
   const [slot1, slot2] = eligible;
   if (!slot1) throw new Error("mlb combined featured: no eligible team for either slot");
@@ -389,12 +419,15 @@ export async function assembleMlbCombinedFeatured(
 
   const built1 = await build(slot1, 0);
   const built2 = slot2 ? await build(slot2, 1) : undefined;
+  const tigersStatsSections =
+    tigersStatsEligible && tigers ? await buildTigersStatsSlot(tigers, options) : [];
 
   const sections: DashboardSection[] = [
     built1.card,
     ...(built2 ? [built2.card] : []),
     ...built1.sections,
     ...(built2 ? built2.sections : []),
+    ...tigersStatsSections,
   ];
 
   return {

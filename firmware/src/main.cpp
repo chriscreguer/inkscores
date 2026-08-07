@@ -11,8 +11,8 @@
 
 // Three front buttons (Seeed reTerminal E1002, all active-low):
 //   GPIO3 green       -> refresh the current view (no mode change)
-//   GPIO5 left white  -> force landscape (view 1)
-//   GPIO4 right white -> force portrait  (view 2)
+//   GPIO5 left white  -> landscape: toggle Tigers+Cubs <-> Tigers stats panel
+//   GPIO4 right white -> toggle portrait <-> landscape
 #ifndef REFRESH_BUTTON_PIN
 #define REFRESH_BUTTON_PIN 3
 #endif
@@ -24,6 +24,10 @@
 #endif
 
 RTC_DATA_ATTR bool portraitMode = false;
+// Landscape-only: false = Tigers+Cubs (default), true = Tigers+Tigers stats.
+// Irrelevant while portraitMode is true, but left button always sets it so the
+// right sub-mode is already selected whenever landscape is shown next.
+RTC_DATA_ATTR bool showTigersStats = false;
 
 void initButtons() {
   // Every wake re-fetches and re-renders; the buttons only pick the view. EXT1
@@ -31,11 +35,12 @@ void initButtons() {
   if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT1) {
     const uint64_t status = esp_sleep_get_ext1_wakeup_status();
     if (status & (1ULL << PORTRAIT_BUTTON_PIN)) {
-      portraitMode = true;
-      Serial0.println("Portrait button: view 2 (portrait)");
+      portraitMode = !portraitMode;
+      Serial0.printf("Right button: %s\n", portraitMode ? "portrait" : "landscape");
     } else if (status & (1ULL << LANDSCAPE_BUTTON_PIN)) {
       portraitMode = false;
-      Serial0.println("Landscape button: view 1 (landscape)");
+      showTigersStats = !showTigersStats;
+      Serial0.printf("Left button: landscape, %s\n", showTigersStats ? "Tigers stats" : "Tigers+Cubs");
     } else if (status & (1ULL << REFRESH_BUTTON_PIN)) {
       Serial0.printf("Refresh button: redraw %s\n", portraitMode ? "portrait" : "landscape");
     }
@@ -80,6 +85,7 @@ void setup() {
           previewImageLength,
           previewRefreshSeconds,
           portraitMode,
+          showTigersStats,
           previewImageWidth,
           previewImageHeight) ==
       PreviewImageStatus::Fresh) {

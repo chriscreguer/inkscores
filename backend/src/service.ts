@@ -9,6 +9,7 @@ import { createNcaafAdapter } from "./adapters/ncaaf.js";
 import { createNcaambAdapter } from "./adapters/ncaamb.js";
 import { createMlbStatsAdapter, type MlbStatsAdapter } from "./adapters/mlbStats.js";
 import { createBrefOddsAdapter, type BrefOddsAdapter } from "./adapters/brefOdds.js";
+import { createBrefTeamStatsAdapter, type BrefTeamStatsAdapter } from "./adapters/brefTeamStats.js";
 import { createKalshiOddsAdapter, type KalshiOddsAdapter } from "./adapters/kalshiOdds.js";
 import { createNcaafExtrasAdapter, type NcaafExtrasAdapter } from "./adapters/ncaafExtras.js";
 import { createNflExtrasAdapter, type NflExtrasAdapter } from "./adapters/nflExtras.js";
@@ -47,6 +48,8 @@ export interface BuildLiveOptions {
   editorial?: EditorialClient;
   /** Optional real make-playoffs odds (B-Ref) for the playoff-table column. */
   brefOdds?: BrefOddsAdapter;
+  /** Optional B-Ref team batting/pitching stats, for the Tigers stats panel. */
+  brefTeamStats?: BrefTeamStatsAdapter;
   /** Debug: regenerate editorial synchronously, bypassing the per-game cache. */
   forceEditorial?: boolean;
   /** Kalshi playoff-qualifier market odds, for the workshop combined layout. */
@@ -59,6 +62,10 @@ export interface BuildLiveOptions {
    * layout, so the field-position live card can be previewed before the
    * season actually starts. */
   mockNcaafLive?: boolean;
+  /** Left-button landscape toggle: when the Tigers+Cubs slot would normally
+   * show Cubs, show a Tigers hitting/starters/pen stats panel instead. Has no
+   * effect when Lions/MSU Football have taken over the second slot. */
+  tigersStatsPanel?: boolean;
 }
 
 /** Featured services bundled separately from the per-sport adapter registry. */
@@ -66,6 +73,7 @@ export interface FeaturedServices {
   mlbStats: MlbStatsAdapter;
   editorial: EditorialClient;
   brefOdds: BrefOddsAdapter;
+  brefTeamStats: BrefTeamStatsAdapter;
   kalshiOdds: KalshiOddsAdapter;
   ncaafExtras: NcaafExtrasAdapter;
   nflExtras: NflExtrasAdapter;
@@ -339,6 +347,7 @@ export function createDefaultFeaturedServices(
   return {
     mlbStats: createMlbStatsAdapter({ cache, now }),
     brefOdds: createBrefOddsAdapter({ cache, now }),
+    brefTeamStats: createBrefTeamStatsAdapter({ cache, now }),
     kalshiOdds: createKalshiOddsAdapter({ cache, now }),
     ncaafExtras: createNcaafExtrasAdapter({ cache, now }),
     nflExtras: createNflExtrasAdapter({ cache, now }),

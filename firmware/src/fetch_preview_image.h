@@ -9,6 +9,7 @@ PreviewImageStatus fetchPreviewImage(
     size_t& length,
     uint32_t& refreshSeconds,
     bool portraitMode,
+    bool showTigersStats,
     int& width,
     int& height);
 
