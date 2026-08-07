@@ -52,6 +52,8 @@ export type HomeAway = "home" | "away";
 export interface NormalizedGame {
   /** ISO 8601 datetime string. */
   date: string;
+  /** Upstream event id, used internally to fetch box-score/storyline detail. */
+  eventId?: string;
   opponent: string;
   homeAway: HomeAway;
   result?: GameResult;
@@ -59,6 +61,8 @@ export interface NormalizedGame {
   score?: string;
   /** Human display time, e.g. "Tonight 6:40" or "Today 1:20". */
   displayTime?: string;
+  /** Verified game facts extracted for the LLM recap prompt. Never sent directly. */
+  gameNotes?: string[];
 }
 
 export interface TeamSummary {

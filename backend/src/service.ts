@@ -234,10 +234,12 @@ async function assembleFeaturedDashboard(
       if (t.summary?.isLive) continue;
       const lastLine = t.card.last && t.card.last !== "—" ? t.card.last : undefined;
       const lastFinalKey = t.summary?.lastGame?.date;
+      const gameNotes = t.summary?.lastGame?.gameNotes;
       const ctx = {
         teamName: t.team.fullName,
         ...(lastLine ? { lastGameLine: lastLine } : {}),
         ...(lastFinalKey ? { lastFinalKey } : {}),
+        ...(gameNotes?.length ? { gameNotes } : {}),
       };
       if (options.forceEditorial) {
         // Debug path: regenerate now (synchronous), overwriting the cache.

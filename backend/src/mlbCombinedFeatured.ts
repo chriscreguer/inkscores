@@ -136,10 +136,12 @@ async function buildMlbSlot(
     const lastLine =
       cardFromBase.last && cardFromBase.last !== "—" ? cardFromBase.last : undefined;
     const lastFinalKey = input.summary?.lastGame?.date;
+    const gameNotes = input.summary?.lastGame?.gameNotes;
     const ctx = {
       teamName: data.team.fullName,
       ...(lastLine ? { lastGameLine: lastLine } : {}),
       ...(lastFinalKey ? { lastFinalKey } : {}),
+      ...(gameNotes?.length ? { gameNotes } : {}),
     };
     if (options.forceEditorial) {
       input.editorial = await options.editorial.generate(data.team.key, ctx, { force: true });

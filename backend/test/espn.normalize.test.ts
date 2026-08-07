@@ -14,6 +14,7 @@ describe("normalizeScheduleToGames", () => {
   it("picks the most recent completed game as lastGame", () => {
     const r = normalizeScheduleToGames(schedule, "DET", NOW);
     expect(r.lastGame).toMatchObject({
+      eventId: "2",
       opponent: "CLE",
       homeAway: "home",
       result: "W",

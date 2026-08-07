@@ -5,6 +5,7 @@ import {
   topPlayersFromCompetition,
   topPlayersFromSummary,
   topPlayersFromFootballSummary,
+  gameNotesFromSummary,
   liveDetailsFromScoreboard,
   winProbabilityFromSummary,
   scoreboardUrl,
@@ -56,6 +57,48 @@ describe("topPlayersFromSummary", () => {
   it("returns [] when the team or boxscore is missing", () => {
     expect(topPlayersFromSummary(summary, "ZZZ")).toEqual([]);
     expect(topPlayersFromSummary({}, "PIT")).toEqual([]);
+  });
+});
+
+describe("gameNotesFromSummary", () => {
+  const summary = fixture("espn-mlb-boxscore.json"); // CIN vs PIT live boxscore
+
+  it("turns verified ESPN summary facts into compact LLM source notes", () => {
+    const lines = gameNotesFromSummary(
+      {
+        ...summary,
+        headlines: [
+          {
+            description:
+              "Griffin's homer gave Pittsburgh the lead before the bullpen had to hold on late.",
+          },
+        ],
+        winprobability: [
+          { homeWinPercentage: 0.2 },
+          { homeWinPercentage: 0.8 },
+        ],
+        header: {
+          competitions: [
+            {
+              competitors: [
+                { homeAway: "home", team: { abbreviation: "PIT" } },
+                { homeAway: "away", team: { abbreviation: "CIN" } },
+              ],
+            },
+          ],
+        },
+      },
+      "PIT",
+      "mlb",
+    );
+
+    expect(lines).toContain(
+      "Headline: Griffin's homer gave Pittsburgh the lead before the bullpen had to hold on late.",
+    );
+    expect(lines).toContain(
+      "Top box-score lines: Griffin 1-2, HR, RBI; Reynolds 1-2; Skenes 4.0 IP, 4 ER, 7 K",
+    );
+    expect(lines).toContain("Game flow: Win probability swung from 20% to 80% for PIT");
   });
 });
 

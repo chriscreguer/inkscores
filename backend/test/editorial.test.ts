@@ -85,6 +85,30 @@ describe("createEditorialClient", () => {
     expect(recapBody.tools[0].type).toBe("web_search_preview");
   });
 
+  it("passes verified game notes and discourages generic score-derived recaps", async () => {
+    const fetchImpl = vi.fn(async () => ({
+      ok: true,
+      json: async () => responsePayload("Greene's late homer changed the whole ninth-inning script."),
+    } as any));
+    const client = createEditorialClient({ apiKey: "sk-test", fetchImpl: fetchImpl as any });
+    await client.generate("tigers", {
+      teamName: "Detroit Tigers",
+      lastGameLine: "W 5-3 vs CLE",
+      lastFinalKey: "2026-06-24",
+      gameNotes: [
+        "Headline: Riley Greene hit a go-ahead homer in the ninth.",
+        "Game flow: Win probability swung from 18% to 92% for DET.",
+      ],
+    });
+
+    const recapBody = JSON.parse((fetchImpl.mock.calls[0] as any)[1].body);
+    expect(recapBody.input).toContain("Verified notes from that game");
+    expect(recapBody.input).toContain("Riley Greene hit a go-ahead homer");
+    expect(recapBody.input).toContain("Do not default to broad score-derived phrasing");
+    expect(recapBody.input).toContain("pitching shined");
+    expect(recapBody.input).not.toContain("playoff hopes");
+  });
+
   it("caches by last-final key so a repeat needs no new calls", async () => {
     const fetchImpl = vi.fn(async () => ({
       ok: true,

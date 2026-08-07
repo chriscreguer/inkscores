@@ -338,6 +338,131 @@ export function topPlayersFromFootballSummary(raw: Any, teamAbbr: string, max = 
   return lines.slice(0, max);
 }
 
+function cleanGameNote(text: Any, maxLen = 150): string | undefined {
+  if (text == null) return undefined;
+  const line = String(text)
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/^["']|["']$/g, "")
+    .trim();
+  if (line.length < 4) return undefined;
+  if (line.length <= maxLen) return line;
+  const hard = line.slice(0, maxLen + 1);
+  const lastSpace = hard.lastIndexOf(" ");
+  return (lastSpace > 0 ? hard.slice(0, lastSpace) : hard.slice(0, maxLen)).trimEnd();
+}
+
+function pushGameNote(out: string[], seen: Set<string>, label: string, text: Any, max: number): void {
+  if (out.length >= max) return;
+  const clean = cleanGameNote(text);
+  if (!clean) return;
+  const note = `${label}: ${clean}`;
+  const key = note.toLowerCase();
+  if (seen.has(key)) return;
+  seen.add(key);
+  out.push(note);
+}
+
+function headlineNotes(raw: Any): Any[] {
+  const notes: Any[] = [];
+  for (const h of raw?.headlines ?? []) {
+    notes.push(h?.description ?? h?.headline ?? h?.shortLinkText ?? h?.text);
+  }
+  for (const article of [raw?.article, ...(raw?.articles ?? [])]) {
+    notes.push(article?.headline, article?.description);
+  }
+  return notes;
+}
+
+function playText(play: Any): string | undefined {
+  return cleanGameNote(
+    play?.text ??
+      play?.shortText ??
+      play?.description ??
+      play?.type?.text ??
+      play?.result?.description,
+  );
+}
+
+function notablePlayNotes(raw: Any): string[] {
+  const scoring = Array.isArray(raw?.scoringPlays) ? raw.scoringPlays : [];
+  const plays = Array.isArray(raw?.plays) ? raw.plays : [];
+  const important = plays.filter((p: Any) => {
+    const text = playText(p);
+    return (
+      p?.scoringPlay === true ||
+      p?.scoreValue != null ||
+      Boolean(text && /(home run|touchdown|intercept|fumble|eject|injur|delay|walk-off|double play)/i.test(text))
+    );
+  });
+  return [...scoring, ...important]
+    .map(playText)
+    .filter((note): note is string => Boolean(note));
+}
+
+function winProbabilityNote(raw: Any, teamAbbr: string): string | undefined {
+  const series: Any[] = raw?.winprobability ?? [];
+  if (series.length < 2) return undefined;
+  const competitors: Any[] = raw?.header?.competitions?.[0]?.competitors ?? [];
+  const us = competitors.find((c) => c.team?.abbreviation === teamAbbr);
+  if (!us) return undefined;
+
+  const values = series
+    .map((point) => {
+      if (typeof point?.homeWinPercentage !== "number") return undefined;
+      const pct = us.homeAway === "home" ? point.homeWinPercentage : 1 - point.homeWinPercentage;
+      if (!Number.isFinite(pct)) return undefined;
+      return Math.max(0, Math.min(1, pct));
+    })
+    .filter((pct): pct is number => pct != null);
+  if (values.length < 2) return undefined;
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  if (max - min < 0.35) return undefined;
+  const minPct = Math.round(min * 100);
+  const maxPct = Math.round(max * 100);
+  return `Win probability swung from ${minPct}% to ${maxPct}% for ${teamAbbr}`;
+}
+
+/**
+ * Extract concrete, verified game facts from ESPN's per-game summary payload.
+ * These notes are source material for the LLM recap, not user-facing copy.
+ */
+export function gameNotesFromSummary(
+  raw: Any,
+  teamAbbr: string,
+  sport: Sport,
+  max = 8,
+): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  for (const note of headlineNotes(raw)) {
+    pushGameNote(out, seen, "Headline", note, max);
+  }
+
+  const players =
+    sport === "nfl" || sport === "ncaaf"
+      ? topPlayersFromFootballSummary(raw, teamAbbr, 3)
+      : sport === "mlb"
+        ? topPlayersFromSummary(raw, teamAbbr, 3)
+        : [];
+  if (players.length) {
+    pushGameNote(out, seen, "Top box-score lines", players.join("; "), max);
+  }
+
+  const wp = winProbabilityNote(raw, teamAbbr);
+  if (wp) pushGameNote(out, seen, "Game flow", wp, max);
+
+  const plays = notablePlayNotes(raw).slice(-4);
+  for (const play of plays) {
+    pushGameNote(out, seen, "Notable play", play, max);
+  }
+
+  return out;
+}
+
 export interface LiveDetails {
   live?: LiveSituation;
   eventId?: string;
@@ -405,6 +530,7 @@ function gameFrom(
   const state = comp.status?.type?.state as string | undefined;
   const game: NormalizedGame = {
     date: event.date,
+    ...(event.id != null ? { eventId: String(event.id) } : {}),
     opponent: them.team?.abbreviation ?? "?",
     homeAway: us.homeAway === "home" ? "home" : "away",
   };
@@ -708,6 +834,19 @@ export function createEspnAdapter(config: EspnAdapterConfig): EspnAdapter {
     }
     if (lastGame) summary.lastGame = lastGame;
     if (nextGame) summary.nextGame = nextGame;
+    if (!isLive && summary.lastGame?.eventId) {
+      try {
+        const sum = await cache.getOrLoad(
+          `summary:${config.sport}:${summary.lastGame.eventId}`,
+          CACHE_TTLS.gameDay,
+          () => fetchJson(summaryUrl(config.sport, summary.lastGame!.eventId!)),
+        );
+        const notes = gameNotesFromSummary(sum, abbr, config.sport);
+        if (notes.length) summary.lastGame.gameNotes = notes;
+      } catch {
+        // completed-game detail is best-effort; the recap prompt falls back
+      }
+    }
     if (isLive) {
       // Prefer the scoreboard's full score + situation (already fetched above);
       // the schedule only carries the inning.

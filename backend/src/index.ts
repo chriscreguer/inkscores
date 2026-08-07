@@ -103,7 +103,7 @@ export function createApp(options: AppOptions = {}): Express {
 
   app.get("/api/dashboard.json", async (req: Request, res: Response) => {
     const query = req.query as DashboardQuery;
-    const { dashboard, cacheControlSeconds } = await resolveDashboardResponse({
+    const { dashboard, cacheControlSeconds, noStore } = await resolveDashboardResponse({
       query,
       adapters,
       featured,
@@ -113,7 +113,7 @@ export function createApp(options: AppOptions = {}): Express {
 
     res.set(
       "Cache-Control",
-      `public, max-age=${cacheControlSeconds}, stale-if-error=86400`,
+      noStore ? "no-store" : `public, max-age=${cacheControlSeconds}, stale-if-error=86400`,
     );
     res.json(dashboard);
   });

@@ -30,6 +30,7 @@ export interface ResolveOptions {
 export interface DashboardResponse {
   dashboard: Dashboard;
   cacheControlSeconds: number;
+  noStore?: boolean;
 }
 
 /** A valid, contract-shaped fallback the device can always render. */
@@ -103,7 +104,11 @@ export async function resolveDashboardResponse(
       ...(mockNcaafLive ? { mockNcaafLive: true } : {}),
     });
 
-    return { dashboard, cacheControlSeconds: dashboard.refreshAfterSeconds };
+    return {
+      dashboard,
+      cacheControlSeconds: dashboard.refreshAfterSeconds,
+      ...(forceEditorial ? { noStore: true } : {}),
+    };
   } catch {
     const dashboard = degradedDashboard(now);
     return { dashboard, cacheControlSeconds: dashboard.refreshAfterSeconds };

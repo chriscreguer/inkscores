@@ -58,6 +58,32 @@ describe("createEspnAdapter.getTeamSummary", () => {
     expect(summary.standing).toBeUndefined();
   });
 
+  it("fetches completed-game summary detail and stores source notes for editorial", async () => {
+    const fetchJson = vi.fn(async (url: string) => {
+      if (url.includes("/schedule")) return schedule;
+      if (url.includes("/scoreboard")) return {};
+      if (url.includes("/summary?event=2")) {
+        return {
+          headlines: [
+            {
+              description:
+                "Riley Greene's ninth-inning homer capped Detroit's comeback after a long bullpen night.",
+            },
+          ],
+        };
+      }
+      return standings;
+    });
+    const adapter = adapterWith(fetchJson);
+
+    const summary = await adapter.getTeamSummary(tigers);
+
+    expect(summary.lastGame?.gameNotes).toEqual([
+      "Headline: Riley Greene's ninth-inning homer capped Detroit's comeback after a long bullpen night.",
+    ]);
+    expect(fetchJson).toHaveBeenCalledWith(expect.stringContaining("/summary?event=2"));
+  });
+
   it("detects live from the scoreboard when the cached schedule lags first pitch", async () => {
     // Schedule still says the game is upcoming (cached before first pitch)...
     const staleSchedule = {
@@ -170,8 +196,8 @@ describe("createEspnAdapter.getTeamSummary", () => {
     await adapter.getTeamSummary(tigers);
     await adapter.getTeamSummary(tigers);
 
-    // 1 schedule + 1 scoreboard + 1 standings, all reused on the second call.
-    expect(fetchJson).toHaveBeenCalledTimes(3);
+    // 1 schedule + 1 scoreboard + 1 completed-game summary + 1 standings.
+    expect(fetchJson).toHaveBeenCalledTimes(4);
   });
 });
 

@@ -68,6 +68,16 @@ describe("resolveDashboardResponse", () => {
     expect(titles).toContain("Pistons"); // out of season but forced
   });
 
+  it("marks forced editorial refresh responses as no-store", async () => {
+    const r = await resolveDashboardResponse({
+      query: { forceEditorial: "1" },
+      adapters: registry(okAdapter),
+      now: JUNE,
+      loadMock: () => undefined,
+    });
+    expect(r.noStore).toBe(true);
+  });
+
   it("never throws: returns a degraded message dashboard when everything fails", async () => {
     const r = await resolveDashboardResponse({
       query: {},

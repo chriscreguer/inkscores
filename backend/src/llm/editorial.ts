@@ -22,6 +22,8 @@ const DEFAULT_MODEL = "gpt-4o-mini";
 
 /** Hard cap on a recap line so portrait summaries naturally fit in two lines. */
 const MAX_SUMMARY_LEN = 100;
+/** Prompt below the hard cap so model overrun does not produce clipped prose. */
+const PROMPT_SUMMARY_LEN = 90;
 
 /** Hard cap on a displayed player name (the chips are tiny). */
 const MAX_NAME_LEN = 11;
@@ -43,6 +45,8 @@ export interface EditorialContext {
   lastGameLine?: string;
   /** Identity of the last final (e.g. its date); the cache key. */
   lastFinalKey?: string;
+  /** Verified facts extracted from the game summary/box score. */
+  gameNotes?: string[];
 }
 
 /** A minimal key/value store the editorial cache writes through. */
@@ -145,12 +149,24 @@ function recapPrompt(ctx: EditorialContext): string {
       `and not an earlier game. Treat the result itself as already known — do not ` +
       `restate it.`;
   }
+  const notes = (ctx.gameNotes ?? [])
+    .map((note) => note.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 8);
+  const sourceNotes = notes.length
+    ? ` Verified notes from that game:\n${notes.map((note, i) => `${i + 1}. ${note}`).join("\n")}\n` +
+      `Base the sentence on those notes. Choose a concrete player, event, late swing, ` +
+      `injury, debut, streak, bullpen/rotation wrinkle, or unusual detail. Do not ` +
+      `default to broad score-derived phrasing like "pitching shined", "bats ` +
+      `struggled", "offense exploded", or playoff-hopes commentary.`
+    : "";
   return (
-    `In ${MAX_SUMMARY_LEN} characters or fewer and no more than 16 words, give most relevant talking ` +
-    `points about the ${ctx.teamName} after their most recent game. Be as ` +
+    `In ${PROMPT_SUMMARY_LEN} characters or fewer and no more than 16 words, write one complete sentence with the ` +
+    `most specific talking ` +
+    `point about the ${ctx.teamName} after their most recent game. Be as ` +
     `concise as possible. Do NOT state anything obvious from the box score — ` +
     `no final score, no who won or lost, no run/point totals. Focus on the ` +
-    `overarching storyline for the team.${grounding} Reply with the sentence ` +
+    `overarching storyline for the team.${grounding}${sourceNotes} Reply with the sentence ` +
     `only — no preamble, no quotes.`
   );
 }
