@@ -429,8 +429,17 @@ export async function assembleMlbCombinedFeatured(
       ? await buildTigersStatsSlot(tigers, options, built1.card.hot, built1.card.cold)
       : [];
 
+  // The stats-panel toggle puts the Tigers stats table (with its own
+  // flame/snowflake icons) where Cubs would be, so the Tigers card's own
+  // hot/cold row would just repeat it. Swap it for the completed game's
+  // box-score highlights instead; if those aren't available, hot/cold stays.
+  const toggleTopPlayers = tigersStatsEligible ? tigers?.summary?.lastGame?.topPlayers : undefined;
+  const card1 = toggleTopPlayers?.length
+    ? { ...built1.card, hot: undefined, cold: undefined, topPlayers: toggleTopPlayers }
+    : built1.card;
+
   const sections: DashboardSection[] = [
-    built1.card,
+    card1,
     ...(built2 ? [built2.card] : []),
     ...built1.sections,
     ...(built2 ? built2.sections : []),

@@ -843,6 +843,10 @@ export function createEspnAdapter(config: EspnAdapterConfig): EspnAdapter {
         );
         const notes = gameNotesFromSummary(sum, abbr, config.sport);
         if (notes.length) summary.lastGame.gameNotes = notes;
+        if (config.sport === "mlb") {
+          const players = topPlayersFromSummary(sum, abbr, 3);
+          if (players.length) summary.lastGame.topPlayers = players;
+        }
       } catch {
         // completed-game detail is best-effort; the recap prompt falls back
       }

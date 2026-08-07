@@ -63,6 +63,10 @@ export interface NormalizedGame {
   displayTime?: string;
   /** Verified game facts extracted for the LLM recap prompt. Never sent directly. */
   gameNotes?: string[];
+  /** Box-score highlights (top hitters + the most-used pitcher's line) for
+   * this completed game, e.g. "Torkelson 2-4, HR". Same shape as
+   * LiveSituation.topPlayers, computed from the same summary payload. */
+  topPlayers?: string[];
 }
 
 export interface TeamSummary {
@@ -140,6 +144,10 @@ export interface TeamCardSection {
   hot?: string[];
   /** Players who are cold over the last ~10 games. */
   cold?: string[];
+  /** Box-score highlights for the completed game, shown instead of hot/cold
+   * when a caller decides they'd be redundant (e.g. an adjacent stats table
+   * already carries the streak icons). */
+  topPlayers?: string[];
 }
 
 /** A snapshot of an in-progress game. Volatile fields (ball/strike count) are

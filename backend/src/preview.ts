@@ -495,13 +495,17 @@ function drawSummaryCard(ctx, s, x, y, tx) {
     drawCalendarText(ctx, String(s.next), startX, logoMid - 7, 14);
   }
 
-  // Hot/cold reserved near the bottom (nudged up); summary fills above (down).
-  const hasHC = (s.hot && s.hot.length) || (s.cold && s.cold.length);
+  // Footer row reserved near the bottom (nudged up); summary fills above
+  // (down). Box-score highlights take priority over hot/cold when both are
+  // present — the backend only sends both when the adjacent Tigers stats
+  // table already carries hot/cold via its own flame/snowflake icons.
+  const hasStats = s.topPlayers && s.topPlayers.length;
+  const hasHC = !hasStats && ((s.hot && s.hot.length) || (s.cold && s.cold.length));
   const h = cardHFor(s);
   const hcTop = y + h - 24;
 
   const startY = y + 58, lineH = 14;
-  const sumBottom = (hasHC ? hcTop : y + h - 6) - 1;
+  const sumBottom = ((hasStats || hasHC) ? hcTop : y + h - 6) - 1;
   const maxLines = Math.max(2, Math.floor((sumBottom - startY) / lineH));
 
   // Result score inline before the summary (first line is narrowed for it).
@@ -513,8 +517,10 @@ function drawSummaryCard(ctx, s, x, y, tx) {
     sy += lineH;
   });
 
-  // Hot (flame) and cold (snowflake) side by side on one row.
-  if (hasHC) {
+  if (hasStats) {
+    drawGameStatsLine(ctx, x, hcTop, s);
+  } else if (hasHC) {
+    // Hot (flame) and cold (snowflake) side by side on one row.
     drawHotCold(ctx, x, hcTop, s);
   }
 }
@@ -524,11 +530,12 @@ function drawPlainSummaryCard(ctx, s, x, y) {
   drawTeamLogoMark(ctx, s, x + 12, y + 12, logoSize);
   txt(ctx, s.title == null ? "—" : String(s.title), x + 12 + logoSize + 10, y + 22, 22, "700", INK.black);
 
-  const hasHC = (s.hot && s.hot.length) || (s.cold && s.cold.length);
+  const hasStats = s.topPlayers && s.topPlayers.length;
+  const hasHC = !hasStats && ((s.hot && s.hot.length) || (s.cold && s.cold.length));
   const h = cardHFor(s);
   const hcTop = y + h - 24;
   const startY = y + 62, lineH = 14;
-  const sumBottom = (hasHC ? hcTop : y + h - 6) - 1;
+  const sumBottom = ((hasStats || hasHC) ? hcTop : y + h - 6) - 1;
   const maxLines = Math.max(2, Math.floor((sumBottom - startY) / lineH));
   const lines = wrapText(ctx, s.summary, COL_W - 24, "400 13px " + fam());
   let sy = startY;
@@ -537,7 +544,9 @@ function drawPlainSummaryCard(ctx, s, x, y) {
     sy += lineH;
   });
 
-  if (hasHC) {
+  if (hasStats) {
+    drawGameStatsLine(ctx, x, hcTop, s);
+  } else if (hasHC) {
     drawHotCold(ctx, x, hcTop, s);
   }
 }
@@ -581,16 +590,18 @@ function drawScorebugSummaryCard(ctx, s, x, y, variant) {
   if (variant === "scorebug") drawFinalMeta(ctx, s, scorebugEnd + 12, y);
 
   const showHotCold = variant !== "recommended";
-  const hasHC = showHotCold && ((s.hot && s.hot.length) || (s.cold && s.cold.length));
+  const hasStats = showHotCold && s.topPlayers && s.topPlayers.length;
+  const hasHC = showHotCold && !hasStats && ((s.hot && s.hot.length) || (s.cold && s.cold.length));
+  const hasFooterRow = hasStats || hasHC;
   const h = cardHFor(s);
   const hcTop = y + h - 24;
   const startY = y + (variant === "scorebug" ? 70 : 62), lineH = 14;
   const topNext = variant === "scorebug" && s.next != null;
   const nextReserve = !topNext && s.next != null ? 34 : 0;
-  const sumBottom = (hasHC ? hcTop - 8 : y + h - 6 - nextReserve) - 1;
+  const sumBottom = (hasFooterRow ? hcTop - 8 : y + h - 6 - nextReserve) - 1;
   const maxLines = variant === "recommended"
     ? 2
-    : (hasHC ? 2 : Math.max(2, Math.floor((sumBottom - startY) / lineH)));
+    : (hasFooterRow ? 2 : Math.max(2, Math.floor((sumBottom - startY) / lineH)));
   const fallback = [s.record, s.standing].filter((v) => v && v !== "—").join(" · ");
   const body = s.summary || fallback;
   const lines = wrapText(ctx, body, COL_W - 24, "400 13px " + fam());
@@ -610,7 +621,9 @@ function drawScorebugSummaryCard(ctx, s, x, y, variant) {
     drawCalendarText(ctx, String(s.next), x + 12, nextY, 13);
   }
 
-  if (hasHC) {
+  if (hasStats) {
+    drawGameStatsLine(ctx, x, hcTop, s);
+  } else if (hasHC) {
     drawHotCold(ctx, x, hcTop, s);
   }
 }
@@ -1042,6 +1055,16 @@ function drawHotCold(ctx, x, hy, s) {
   drawSnowflake(ctx, snowX, hy + 8, 14, INK.blue);
   const coldTextX = snowX + SNOW_TEXT;
   txt(ctx, fitWidth(ctx, namesOnly(s.cold), rightEdge - coldTextX, font), coldTextX, hy + 3, 12, "400", INK.black);
+}
+
+// Box-score highlights (SP line + a hitter or two) for the completed game,
+// shown in the same footer slot as drawHotCold when the adjacent Tigers
+// stats table already carries hot/cold via its own flame/snowflake icons.
+function drawGameStatsLine(ctx, x, hy, s) {
+  const font = "400 12px " + fam();
+  const rightEdge = x + COL_W - 12;
+  const text = (s.topPlayers || []).join(" · ");
+  txt(ctx, fitWidth(ctx, text, rightEdge - (x + 12), font), x + 12, hy + 3, 12, "400", INK.black);
 }
 
 // Recent-form dots (up to 10): win = solid green, loss = dithered light-red.
