@@ -1216,28 +1216,30 @@ function drawStandings(ctx, s, x, y) {
   return ry - y;  // height used, so callers can stack below
 }
 
-// Compact player-stats table (Name + 4 right-aligned stat columns), for the
-// Tigers hitting/starters/pen panel. Denser than drawStandings (18px rows vs
-// 20px, no rank column, no dividers) — needed to fit 9+5+5 rows in one column.
-const STATS_COL_RIGHT = [196, 254, 312, 372];
+// Player-stats table (Name + 4 right-aligned stat columns), for the Tigers
+// hitting/starters/pen panel. Same type sizes and row height as drawStandings
+// (title 16px, header 11px, rows 15px/20px) so both columns read consistently
+// — the table-length data (see brefTeamStats.ts) is what shrinks to fit, not
+// the type.
+const STATS_COL_RIGHT = [216, 268, 320, 372];
 function drawStatsTable(ctx, s, x, y) {
-  txt(ctx, s.title, x, y, 13, "700", INK.black);
+  txt(ctx, s.title, x, y, 16, "700", INK.black);
   const cols = s.columns || [];
   ctx.textAlign = "right";
   for (let k = 1; k < cols.length && k - 1 < STATS_COL_RIGHT.length; k++) {
-    txt(ctx, cols[k], x + STATS_COL_RIGHT[k - 1], y + 2, 10, "400", INK.black);
+    txt(ctx, cols[k], x + STATS_COL_RIGHT[k - 1], y + 5, 11, "400", INK.black);
   }
   ctx.textAlign = "left";
   ctx.strokeStyle = INK.black; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(x, y + 16.5); ctx.lineTo(x + COL_W, y + 16.5); ctx.stroke();
-  const rows = s.rows || []; const rowH = 18;
-  let ry = y + 20;
+  ctx.beginPath(); ctx.moveTo(x, y + 21.5); ctx.lineTo(x + COL_W, y + 21.5); ctx.stroke();
+  const rows = s.rows || []; const rowH = 20;
+  let ry = y + 27;
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    txt(ctx, r[0] == null ? "" : r[0], x, ry, 12, "400", INK.black);
+    txt(ctx, r[0] == null ? "" : r[0], x + 6, ry, 15, "400", INK.black);
     ctx.textAlign = "right";
     for (let k = 1; k < r.length && k - 1 < STATS_COL_RIGHT.length; k++) {
-      txt(ctx, r[k] == null ? "" : r[k], x + STATS_COL_RIGHT[k - 1], ry, 12, "400", INK.black);
+      txt(ctx, r[k] == null ? "" : r[k], x + STATS_COL_RIGHT[k - 1], ry, 15, "400", INK.black);
     }
     ctx.textAlign = "left";
     ry += rowH;

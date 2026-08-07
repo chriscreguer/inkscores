@@ -106,13 +106,11 @@ describe("selectStarters / selectRelievers", () => {
     ]);
   });
 
-  it("keeps swingmen and spot starters out of the reliever top 5 by IP, displayed by WAR desc", () => {
+  it("keeps swingmen and spot starters out of the reliever top 3 by IP, displayed by WAR desc", () => {
     expect(selectRelievers(pitchers).map((p) => p.name)).toEqual([
       "Tyler Holton",
-      "Ty Madden",
       "Kyle Finnegan",
       "Drew Anderson",
-      "Enmanuel De Jesus",
     ]);
   });
 });
@@ -155,7 +153,7 @@ describe("createBrefTeamStatsAdapter", () => {
     const [hitting, starters, pen] = await adapter.getTeamStatsTables("DET", "blue");
     expect(hitting.rows).toHaveLength(9);
     expect(starters.rows).toHaveLength(5);
-    expect(pen.rows).toHaveLength(5);
+    expect(pen.rows).toHaveLength(3);
     expect(hitting.rows[0]?.[0]).toBe("Kevin McGonigle");
   });
 });

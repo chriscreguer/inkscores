@@ -146,7 +146,9 @@ export function selectStarters(pitchers: RawPitcherLine[], n = 5): RawPitcherLin
     .sort((a, b) => b.war - a.war);
 }
 
-export function selectRelievers(pitchers: RawPitcherLine[], n = 5): RawPitcherLine[] {
+// 3, not 5 — the stats panel's row budget is fixed (matches the left column's
+// type size), and hitting (9) + starters (5) already fill most of it.
+export function selectRelievers(pitchers: RawPitcherLine[], n = 3): RawPitcherLine[] {
   return pitchers
     .filter((p) => !isStarter(p))
     .sort((a, b) => b.ip - a.ip)
