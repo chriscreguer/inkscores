@@ -1231,12 +1231,24 @@ function drawStatsTable(ctx, s, x, y) {
   }
   ctx.textAlign = "left";
   ctx.strokeStyle = INK.black; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(x, y + 21.5); ctx.lineTo(x + COL_W, y + 21.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, y + 19.5); ctx.lineTo(x + COL_W, y + 19.5); ctx.stroke();
   const rows = s.rows || []; const rowH = 20;
-  let ry = y + 27;
+  let ry = y + 24;
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    txt(ctx, r[0] == null ? "" : r[0], x + 6, ry, 15, "400", INK.black);
+    // Hot/cold marker: brefTeamStats.ts appends " #H"/" #C" to the name for a
+    // player on the team card's streak list — same convention as the AP-rank
+    // suffix on football standings rows (a small icon in place of raw text).
+    const nameRaw = r[0] == null ? "" : String(r[0]);
+    const streak = /^(.*)\s#(H|C)$/.exec(nameRaw);
+    let nameX = x + 6;
+    if (streak) {
+      const iconCx = x + 12, iconCy = ry + 7.5;
+      if (streak[2] === "H") drawFlame(ctx, iconCx, iconCy, 11, INK.red);
+      else drawSnowflake(ctx, iconCx, iconCy, 11, INK.blue);
+      nameX = x + 19;
+    }
+    txt(ctx, streak ? streak[1] : nameRaw, nameX, ry, 15, "400", INK.black);
     ctx.textAlign = "right";
     for (let k = 1; k < r.length && k - 1 < STATS_COL_RIGHT.length; k++) {
       txt(ctx, r[k] == null ? "" : r[k], x + STATS_COL_RIGHT[k - 1], ry, 15, "400", INK.black);
@@ -1690,7 +1702,9 @@ function render() {
         drawCard(ctx, c, x, y);
         y += cardHFor(c) + (i < list.length - 1 ? GAP : 0);
       });
-      return y + GAP;
+      // A column with no cards (the Tigers-stats panel) has nothing to gap
+      // below — top-align its content with the other column's card instead.
+      return list.length ? y + GAP : y;
     };
     const leftStandTop = drawColumn(leftCards, LEFT);
     const rightStandTop = drawColumn(rightCards, RIGHT);

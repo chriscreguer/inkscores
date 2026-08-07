@@ -309,17 +309,22 @@ interface Slot {
 }
 
 /** Left-button landscape toggle: hitting/starters/pen stat tables for the
- * given team (cardIndex 1, no card), sourced from Baseball-Reference. Best-
+ * given team (cardIndex 1, no card), sourced from Baseball-Reference. `hot`/
+ * `cold` are the same streak chips already computed for the team card (see
+ * buildMlbSlot below), reused here rather than recomputed, so a hot/cold
+ * player gets a matching flame/snowflake icon in the stats rows too. Best-
  * effort — an empty array on any failure leaves the slot blank rather than
  * failing the whole dashboard. */
 async function buildTigersStatsSlot(
   data: TeamData,
   options: BuildLiveOptions,
+  hot: string[] | undefined,
+  cold: string[] | undefined,
 ): Promise<DashboardSection[]> {
   if (!options.brefTeamStats) return [];
   try {
     const abbr = data.team.espnTeamSlug.toUpperCase();
-    return await options.brefTeamStats.getTeamStatsTables(abbr, data.team.accent);
+    return await options.brefTeamStats.getTeamStatsTables(abbr, data.team.accent, { hot, cold });
   } catch {
     return [];
   }
@@ -420,7 +425,9 @@ export async function assembleMlbCombinedFeatured(
   const built1 = await build(slot1, 0);
   const built2 = slot2 ? await build(slot2, 1) : undefined;
   const tigersStatsSections =
-    tigersStatsEligible && tigers ? await buildTigersStatsSlot(tigers, options) : [];
+    tigersStatsEligible && tigers
+      ? await buildTigersStatsSlot(tigers, options, built1.card.hot, built1.card.cold)
+      : [];
 
   const sections: DashboardSection[] = [
     built1.card,

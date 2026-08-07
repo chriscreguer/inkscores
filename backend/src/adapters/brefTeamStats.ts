@@ -146,14 +146,48 @@ export function selectStarters(pitchers: RawPitcherLine[], n = 5): RawPitcherLin
     .sort((a, b) => b.war - a.war);
 }
 
-// 3, not 5 — the stats panel's row budget is fixed (matches the left column's
-// type size), and hitting (9) + starters (5) already fill most of it.
-export function selectRelievers(pitchers: RawPitcherLine[], n = 3): RawPitcherLine[] {
+// 4, not 5 — the stats panel's row budget is fixed (matches the left
+// column's type size), and hitting (9) + starters (5) already fill most of
+// it. 5 pen rows clips off the bottom of the panel; 4 fits with a clean
+// margin matching the left column.
+export function selectRelievers(pitchers: RawPitcherLine[], n = 4): RawPitcherLine[] {
   return pitchers
     .filter((p) => !isStarter(p))
     .sort((a, b) => b.ip - a.ip)
     .slice(0, n)
     .sort((a, b) => b.war - a.war);
+}
+
+/** Hot/cold chips, same shape as TeamCardSection.hot/cold — e.g.
+ * ["Dingler (.964)", "Greene (.891)"]. */
+export interface StreakChips {
+  hot?: string[];
+  cold?: string[];
+}
+
+const NAME_SUFFIXES = new Set(["jr", "jr.", "sr", "sr.", "ii", "iii", "iv"]);
+
+function lastNameOf(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/);
+  let last = parts[parts.length - 1] ?? fullName;
+  if (parts.length > 1 && NAME_SUFFIXES.has(last.toLowerCase())) {
+    last = parts[parts.length - 2] ?? last;
+  }
+  return last;
+}
+
+function chipLastNames(chips: string[] | undefined): Set<string> {
+  return new Set((chips ?? []).map((c) => String(c).split(" (")[0]!.trim().toLowerCase()));
+}
+
+/** Appends a parseable " #H"/" #C" marker that the renderer (preview.ts)
+ * strips and turns into a flame/snowflake icon next to the player's name —
+ * same convention as the AP-rank suffix on football standings rows. */
+function markStreak(name: string, hot: Set<string>, cold: Set<string>): string {
+  const last = lastNameOf(name).toLowerCase();
+  if (hot.has(last)) return `${name} #H`;
+  if (cold.has(last)) return `${name} #C`;
+  return name;
 }
 
 function fmtWar(n: number): string {
@@ -174,9 +208,15 @@ function fmtEra(n: number): string {
   return n.toFixed(2);
 }
 
-export function buildHittingTable(hitters: RawHitterLine[], accent?: Accent): StandingsSection {
+export function buildHittingTable(
+  hitters: RawHitterLine[],
+  accent?: Accent,
+  streak?: StreakChips,
+): StandingsSection {
+  const hot = chipLastNames(streak?.hot);
+  const cold = chipLastNames(streak?.cold);
   const rows = selectTopHitters(hitters).map((h) => [
-    h.name,
+    markStreak(h.name, hot, cold),
     fmtWar(h.war),
     fmtRate3(h.ops),
     fmtIndex(h.opsPlus),
@@ -198,9 +238,12 @@ function buildPitchingTable(
   title: string,
   pitchers: RawPitcherLine[],
   accent: Accent | undefined,
+  streak: StreakChips | undefined,
 ): StandingsSection {
+  const hot = chipLastNames(streak?.hot);
+  const cold = chipLastNames(streak?.cold);
   const rows = pitchers.map((p) => [
-    p.name,
+    markStreak(p.name, hot, cold),
     fmtWar(p.war),
     fmtEra(p.era),
     fmtIndex(p.eraPlus),
@@ -217,12 +260,20 @@ function buildPitchingTable(
   };
 }
 
-export function buildStartersTable(pitchers: RawPitcherLine[], accent?: Accent): StandingsSection {
-  return buildPitchingTable("tigers-stats-starters", "Starters", selectStarters(pitchers), accent);
+export function buildStartersTable(
+  pitchers: RawPitcherLine[],
+  accent?: Accent,
+  streak?: StreakChips,
+): StandingsSection {
+  return buildPitchingTable("tigers-stats-starters", "Starters", selectStarters(pitchers), accent, streak);
 }
 
-export function buildPenTable(pitchers: RawPitcherLine[], accent?: Accent): StandingsSection {
-  return buildPitchingTable("tigers-stats-pen", "Pen", selectRelievers(pitchers), accent);
+export function buildPenTable(
+  pitchers: RawPitcherLine[],
+  accent?: Accent,
+  streak?: StreakChips,
+): StandingsSection {
+  return buildPitchingTable("tigers-stats-pen", "Pen", selectRelievers(pitchers), accent, streak);
 }
 
 // ---------------------------------------------------------------------------
@@ -238,8 +289,13 @@ export interface BrefTeamStatsDeps {
 
 export interface BrefTeamStatsAdapter {
   /** Hitting, starters, pen tables (in that order) for a team's current season,
-   * from Baseball-Reference's team page. */
-  getTeamStatsTables(abbr: string, accent?: Accent): Promise<[StandingsSection, StandingsSection, StandingsSection]>;
+   * from Baseball-Reference's team page. `streak` (the same hot/cold chips
+   * shown on the team card) marks matching rows for a flame/snowflake icon. */
+  getTeamStatsTables(
+    abbr: string,
+    accent?: Accent,
+    streak?: StreakChips,
+  ): Promise<[StandingsSection, StandingsSection, StandingsSection]>;
 }
 
 /** Build the B-Ref team-stats adapter. Stats move slowly enough in-season that
@@ -253,6 +309,7 @@ export function createBrefTeamStatsAdapter(deps?: BrefTeamStatsDeps): BrefTeamSt
   async function getTeamStatsTables(
     abbr: string,
     accent?: Accent,
+    streak?: StreakChips,
   ): Promise<[StandingsSection, StandingsSection, StandingsSection]> {
     const year = now().getUTCFullYear();
     const html = await cache.getOrLoad(`bref:teamstats:${abbr}:${year}`, ttlMs, () =>
@@ -261,9 +318,9 @@ export function createBrefTeamStatsAdapter(deps?: BrefTeamStatsDeps): BrefTeamSt
     const hitters = parseHitters(html);
     const pitchers = parsePitchers(html);
     return [
-      buildHittingTable(hitters, accent),
-      buildStartersTable(pitchers, accent),
-      buildPenTable(pitchers, accent),
+      buildHittingTable(hitters, accent, streak),
+      buildStartersTable(pitchers, accent, streak),
+      buildPenTable(pitchers, accent, streak),
     ];
   }
 

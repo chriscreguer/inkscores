@@ -106,11 +106,12 @@ describe("selectStarters / selectRelievers", () => {
     ]);
   });
 
-  it("keeps swingmen and spot starters out of the reliever top 3 by IP, displayed by WAR desc", () => {
+  it("keeps swingmen and spot starters out of the reliever top 4 by IP, displayed by WAR desc", () => {
     expect(selectRelievers(pitchers).map((p) => p.name)).toEqual([
       "Tyler Holton",
       "Kyle Finnegan",
       "Drew Anderson",
+      "Enmanuel De Jesus",
     ]);
   });
 });
@@ -144,6 +145,29 @@ describe("buildHittingTable / buildStartersTable / buildPenTable", () => {
   });
 });
 
+describe("hot/cold streak markers", () => {
+  const hitters = parseHitters(html);
+  const pitchers = parsePitchers(html);
+
+  it("appends #H/#C to a matching player's name, matched by the chip's last name", () => {
+    const table = buildHittingTable(hitters, undefined, {
+      hot: ["Dingler (.964)", "McGonigle (1.018)"],
+      cold: ["Torkelson (.512)"],
+    });
+    const byName = Object.fromEntries(table.rows.map((r) => [String(r[0]), r]));
+    expect(Object.keys(byName)).toContain("Dillon Dingler #H");
+    expect(Object.keys(byName)).toContain("Kevin McGonigle #H");
+    expect(Object.keys(byName)).toContain("Spencer Torkelson #C");
+    // Untouched players keep a plain name.
+    expect(Object.keys(byName)).toContain("Riley Greene");
+  });
+
+  it("leaves names untouched when no streak data is given", () => {
+    const table = buildStartersTable(pitchers);
+    expect(table.rows.some((r) => String(r[0]).includes("#"))).toBe(false);
+  });
+});
+
 describe("createBrefTeamStatsAdapter", () => {
   it("fetches and parses via injected fetchText (no network)", async () => {
     const adapter = createBrefTeamStatsAdapter({
@@ -153,7 +177,7 @@ describe("createBrefTeamStatsAdapter", () => {
     const [hitting, starters, pen] = await adapter.getTeamStatsTables("DET", "blue");
     expect(hitting.rows).toHaveLength(9);
     expect(starters.rows).toHaveLength(5);
-    expect(pen.rows).toHaveLength(3);
+    expect(pen.rows).toHaveLength(4);
     expect(hitting.rows[0]?.[0]).toBe("Kevin McGonigle");
   });
 });
