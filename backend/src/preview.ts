@@ -1241,14 +1241,16 @@ function drawStatsTable(ctx, s, x, y) {
     // suffix on football standings rows (a small icon in place of raw text).
     const nameRaw = r[0] == null ? "" : String(r[0]);
     const streak = /^(.*)\s#(H|C)$/.exec(nameRaw);
-    let nameX = x + 6;
+    const nameX = x + 6;
+    const displayName = streak ? streak[1] : nameRaw;
+    txt(ctx, displayName, nameX, ry, 15, "400", INK.black);
     if (streak) {
-      const iconCx = x + 12, iconCy = ry + 7.5;
+      ctx.font = "400 15px " + fam();
+      const nameW = ctx.measureText(displayName).width;
+      const iconCx = nameX + nameW + 10, iconCy = ry + 7.5;
       if (streak[2] === "H") drawFlame(ctx, iconCx, iconCy, 11, INK.red);
       else drawSnowflake(ctx, iconCx, iconCy, 11, INK.blue);
-      nameX = x + 19;
     }
-    txt(ctx, streak ? streak[1] : nameRaw, nameX, ry, 15, "400", INK.black);
     ctx.textAlign = "right";
     for (let k = 1; k < r.length && k - 1 < STATS_COL_RIGHT.length; k++) {
       txt(ctx, r[k] == null ? "" : r[k], x + STATS_COL_RIGHT[k - 1], ry, 15, "400", INK.black);
