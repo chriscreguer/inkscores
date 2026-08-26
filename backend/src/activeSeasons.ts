@@ -41,6 +41,10 @@ export function isInsideBroadSeasonWindow(sport: Sport, now: Date): boolean {
 export function isTeamActive(team: WatchedTeam, context: TeamContext): boolean {
   const { now } = context;
 
+  if (team.sport === "nfl") {
+    return isNflTeamActive(team, context);
+  }
+
   if (context.hasLiveGame) return true;
   if (context.hasPlayoffOrTournamentContext) return true;
 
@@ -55,6 +59,27 @@ export function isTeamActive(team: WatchedTeam, context: TeamContext): boolean {
   }
 
   if (isInsideBroadSeasonWindow(team.sport, now)) return true;
+
+  return false;
+}
+
+/**
+ * NFL preseason must not wake up the Lions slot. Unlike daily sports, a future
+ * regular-season game within 14 days is still just countdown noise here; the
+ * NFL becomes active on a real game day, then remains active after the first
+ * completed regular/postseason game inside the broad season window.
+ */
+function isNflTeamActive(team: WatchedTeam, context: TeamContext): boolean {
+  const { now } = context;
+
+  if (context.hasPlayoffOrTournamentContext) return true;
+  if (!isInsideBroadSeasonWindow(team.sport, now)) return false;
+  if (context.hasLiveGame || context.hasGameToday) return true;
+
+  if (context.lastGame) {
+    const last = new Date(context.lastGame.date);
+    if (last <= now) return true;
+  }
 
   return false;
 }

@@ -261,6 +261,7 @@ export interface Dashboard {
 export interface TeamContext {
   now: Date;
   hasLiveGame?: boolean;
+  hasGameToday?: boolean;
   hasPlayoffOrTournamentContext?: boolean;
   lastGame?: { date: string };
   nextGame?: { date: string };

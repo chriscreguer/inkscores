@@ -194,7 +194,7 @@ function lastGamePlayedLabel(s) {
   return (played.getMonth() + 1) + "/" + played.getDate();
 }
 
-const TEAM_LOGO_FILES = {
+const MLB_LOGO_FILES = {
   ARI: "/preview/team-logos/ari.png",
   ATL: "/preview/team-logos/atl.png",
   BAL: "/preview/team-logos/bal.png",
@@ -226,6 +226,44 @@ const TEAM_LOGO_FILES = {
   TEX: "/preview/team-logos/tex.png",
   TOR: "/preview/team-logos/tor.png",
   WSH: "/preview/team-logos/wsh.png",
+};
+
+const NFL_LOGO_FILES = {
+  ARI: "/preview/team-logos/nfl/ari.png",
+  ATL: "/preview/team-logos/nfl/atl.png",
+  BAL: "/preview/team-logos/nfl/bal.png",
+  BUF: "/preview/team-logos/nfl/buf.png",
+  CAR: "/preview/team-logos/nfl/car.png",
+  CHI: "/preview/team-logos/nfl/chi.png",
+  CIN: "/preview/team-logos/nfl/cin.png",
+  CLE: "/preview/team-logos/nfl/cle.png",
+  DAL: "/preview/team-logos/nfl/dal.png",
+  DEN: "/preview/team-logos/nfl/den.png",
+  DET: "/preview/team-logos/nfl/det.png",
+  GB: "/preview/team-logos/nfl/gb.png",
+  HOU: "/preview/team-logos/nfl/hou.png",
+  IND: "/preview/team-logos/nfl/ind.png",
+  JAX: "/preview/team-logos/nfl/jax.png",
+  KC: "/preview/team-logos/nfl/kc.png",
+  LV: "/preview/team-logos/nfl/lv.png",
+  LAC: "/preview/team-logos/nfl/lac.png",
+  LAR: "/preview/team-logos/nfl/lar.png",
+  MIA: "/preview/team-logos/nfl/mia.png",
+  MIN: "/preview/team-logos/nfl/min.png",
+  NE: "/preview/team-logos/nfl/ne.png",
+  NO: "/preview/team-logos/nfl/no.png",
+  NYG: "/preview/team-logos/nfl/nyg.png",
+  NYJ: "/preview/team-logos/nfl/nyj.png",
+  PHI: "/preview/team-logos/nfl/phi.png",
+  PIT: "/preview/team-logos/nfl/pit.png",
+  SEA: "/preview/team-logos/nfl/sea.png",
+  SF: "/preview/team-logos/nfl/sf.png",
+  TB: "/preview/team-logos/nfl/tb.png",
+  TEN: "/preview/team-logos/nfl/ten.png",
+  WSH: "/preview/team-logos/nfl/wsh.png",
+};
+
+const NCAAF_LOGO_FILES = {
   // MSU football's 2026 opponents, so the live/final scorebug shows a real
   // logo instead of the bordered-text fallback badge.
   TOL: "/preview/team-logos/tol.png",
@@ -242,6 +280,41 @@ const TEAM_LOGO_FILES = {
   RUTG: "/preview/team-logos/rutg.png",
 };
 
+const TEAM_LOGO_FILES_BY_SPORT = {
+  mlb: MLB_LOGO_FILES,
+  nfl: NFL_LOGO_FILES,
+  ncaaf: NCAAF_LOGO_FILES,
+};
+
+const SPORT_BY_TEAM_KEY = {
+  tigers: "mlb",
+  cubs: "mlb",
+  lions: "nfl",
+  pistons: "nba",
+  "msu-football": "ncaaf",
+  "msu-basketball": "ncaamb",
+};
+
+function sportForCard(s) {
+  const key = teamKeyFor(s);
+  if (SPORT_BY_TEAM_KEY[key]) return SPORT_BY_TEAM_KEY[key];
+  const url = String(s.logoUrl || "");
+  if (url.includes("/teamlogos/nfl/")) return "nfl";
+  if (url.includes("/teamlogos/mlb/")) return "mlb";
+  if (url.includes("/teamlogos/ncaa/")) return "ncaaf";
+  if (url.includes("/teamlogos/nba/")) return "nba";
+  return "";
+}
+
+function rasterLogoCacheKey(sport, abbr) {
+  return String(sport || "unknown").toLowerCase() + ":" + String(abbr || "").toUpperCase();
+}
+
+function rasterLogoFileFor(sport, abbr) {
+  const files = TEAM_LOGO_FILES_BY_SPORT[String(sport || "").toLowerCase()];
+  return files ? files[String(abbr || "").toUpperCase()] : null;
+}
+
 // Keyed by watched-team key ("tigers"), not ESPN abbreviation ("DET") — the
 // Lions share that same abbreviation (both are Detroit teams, different
 // sports), and an abbr-keyed scale would incorrectly apply to them too.
@@ -256,36 +329,40 @@ function scorebugVariantFor(s) {
   return "";
 }
 
-function neededRasterLogoAbbrs(dash) {
-  const out = new Set();
+function neededRasterLogos(dash) {
+  const out = new Map();
   for (const s of dash?.sections || []) {
     if (s.type !== "teamCard") continue;
+    const sport = sportForCard(s);
     const teamAbbr = String(teamAbbrFor(s) || "").toUpperCase();
-    if (TEAM_LOGO_FILES[teamAbbr]) out.add(teamAbbr);
+    const teamFile = rasterLogoFileFor(sport, teamAbbr);
+    if (teamFile) out.set(rasterLogoCacheKey(sport, teamAbbr), { sport, abbr: teamAbbr, file: teamFile });
     // Load every possible opponent mark: the scorebug/last-game opponent AND
     // the live opponent (a live card's last-game field is the previous game, so
     // its opponent differs from the team currently being played).
     const parsed = parseLastGame(s.last);
     for (const cand of [s.scorebugOpponent, parsed?.opponent, s.live?.opponent]) {
       const abbr = String(cand || "").toUpperCase();
-      if (TEAM_LOGO_FILES[abbr]) out.add(abbr);
+      const file = rasterLogoFileFor(sport, abbr);
+      if (file) out.set(rasterLogoCacheKey(sport, abbr), { sport, abbr, file });
     }
   }
-  return [...out];
+  return [...out.values()];
 }
 
-function loadRasterLogo(abbr) {
+function loadRasterLogo(entry) {
   return new Promise((resolve) => {
-    if (RASTER_LOGOS[abbr]) return resolve();
+    const key = rasterLogoCacheKey(entry.sport, entry.abbr);
+    if (RASTER_LOGOS[key]) return resolve();
     const img = new Image();
-    img.onload = () => { RASTER_LOGOS[abbr] = img; resolve(); };
+    img.onload = () => { RASTER_LOGOS[key] = img; resolve(); };
     img.onerror = () => resolve();
-    img.src = TEAM_LOGO_FILES[abbr];
+    img.src = entry.file;
   });
 }
 
 async function getRasterLogos(dash) {
-  await Promise.all(neededRasterLogoAbbrs(dash).map(loadRasterLogo));
+  await Promise.all(neededRasterLogos(dash).map(loadRasterLogo));
 }
 
 // ---- drawing ----------------------------------------------------------
@@ -314,8 +391,8 @@ function drawLogo(ctx, name, x, y) {
   ctx.restore();
 }
 
-function drawOpponentMark(ctx, abbr, x, y, size) {
-  const img = RASTER_LOGOS[String(abbr || "").toUpperCase()];
+function drawOpponentMark(ctx, abbr, x, y, size, sport) {
+  const img = RASTER_LOGOS[rasterLogoCacheKey(sport, abbr)];
   if (img) {
     drawRasterLogoImage(ctx, img, abbr, x, y, size);
     return;
@@ -350,7 +427,7 @@ function drawTeamLogoMark(ctx, s, x, y, size) {
   const name = logoNameFor(s);
   const teamKey = teamKeyFor(s);
   const abbr = String(teamAbbrFor(s) || "").toUpperCase();
-  const raster = RASTER_LOGOS[abbr];
+  const raster = RASTER_LOGOS[rasterLogoCacheKey(sportForCard(s), abbr)];
   // Gate on the unambiguous watched-team key, not the ESPN abbreviation —
   // Tigers and Lions both resolve to "DET" (see logoVisualScaleFor).
   if (raster && logoVisualScaleFor(teamKey) !== 1) {
@@ -554,6 +631,7 @@ function drawPlainSummaryCard(ctx, s, x, y) {
 function drawScorebug(ctx, s, x, y, opts = {}) {
   const parsed = parseLastGame(s.last);
   const opponent = String(s.scorebugOpponent || parsed?.opponent || "").toUpperCase();
+  const sport = sportForCard(s);
   const leftScore = parsed?.leftScore || "—";
   const rightScore = parsed?.rightScore || "—";
   const logoSize = opts.logoSize || (LOGOS.size || 44);
@@ -568,12 +646,12 @@ function drawScorebug(ctx, s, x, y, opts = {}) {
   const sy = y + topInset;
 
   if (parsed?.leftSide === "team") drawTeamLogoMark(ctx, s, sx, sy, logoSize);
-  else drawOpponentMark(ctx, opponent, sx, sy, logoSize);
+  else drawOpponentMark(ctx, opponent, sx, sy, logoSize, sport);
   ctx.fillStyle = INK.black; ctx.textBaseline = "middle";
   ctx.fillText(score, sx + logoSize + gap, sy + logoSize / 2 + 1);
   ctx.textBaseline = "top";
   const teamX = sx + logoSize + gap + scoreW + gap;
-  if (parsed?.rightSide === "opponent") drawOpponentMark(ctx, opponent, teamX, sy, logoSize);
+  if (parsed?.rightSide === "opponent") drawOpponentMark(ctx, opponent, teamX, sy, logoSize, sport);
   else drawTeamLogoMark(ctx, s, teamX, sy, logoSize);
   return teamX + logoSize;
 }
@@ -694,6 +772,7 @@ function drawTeamResultSummaryCard(ctx, s, x, y) {
 function drawLiveScorebug(ctx, s, x, y) {
   const L = s.live || {};
   const opponent = String(L.opponent || s.scorebugOpponent || "").toUpperCase();
+  const sport = sportForCard(s);
   const logoSize = LOGOS.size || 44;
   const sx = x + 12;
   const sy = y + 10;
@@ -707,14 +786,14 @@ function drawLiveScorebug(ctx, s, x, y) {
   ctx.font = "800 24px " + fam();
   const scoreW = Math.ceil(ctx.measureText(score).width);
   const gap = 9;
-  if (watchedHome) drawOpponentMark(ctx, opponent, sx, sy, logoSize);
+  if (watchedHome) drawOpponentMark(ctx, opponent, sx, sy, logoSize, sport);
   else drawTeamLogoMark(ctx, s, sx, sy, logoSize);
   ctx.fillStyle = INK.black; ctx.textBaseline = "middle";
   ctx.fillText(score, sx + logoSize + gap, sy + logoSize / 2 + 1);
   ctx.textBaseline = "top";
   const rightX = sx + logoSize + gap + scoreW + gap;
   if (watchedHome) drawTeamLogoMark(ctx, s, rightX, sy, logoSize);
-  else drawOpponentMark(ctx, opponent, rightX, sy, logoSize);
+  else drawOpponentMark(ctx, opponent, rightX, sy, logoSize, sport);
   return rightX + logoSize;
 }
 
@@ -1522,6 +1601,7 @@ function drawPortraitPlayerList(ctx, s, x, y, w, kind) {
 function drawPortraitLiveScorebug(ctx, s, x, y) {
   const L = s.live || {};
   const opponent = String(L.opponent || "").toUpperCase();
+  const sport = sportForCard(s);
   const scoreParts = String(L.score == null ? "—" : L.score).split("-");
   const usScore = (scoreParts[0] || "—").trim();
   const opponentScore = (scoreParts[1] || "—").trim();
@@ -1539,12 +1619,12 @@ function drawPortraitLiveScorebug(ctx, s, x, y) {
   const sy = y + 2;
 
   if (leftTeam) drawTeamLogoMark(ctx, s, sx, sy, logoSize);
-  else drawOpponentMark(ctx, opponent, sx, sy, logoSize);
+  else drawOpponentMark(ctx, opponent, sx, sy, logoSize, sport);
   ctx.fillStyle = INK.black; ctx.textBaseline = "middle";
   ctx.fillText(score, sx + logoSize + gap, sy + logoSize / 2 + 1);
   ctx.textBaseline = "top";
   const rightX = sx + logoSize + gap + scoreW + gap;
-  if (leftTeam) drawOpponentMark(ctx, opponent, rightX, sy, logoSize);
+  if (leftTeam) drawOpponentMark(ctx, opponent, rightX, sy, logoSize, sport);
   else drawTeamLogoMark(ctx, s, rightX, sy, logoSize);
 
   const basesSize = 48;

@@ -31,20 +31,36 @@ export const ESPN_SPORT_PATH: Record<Sport, string> = {
 const SITE_BASE = "https://site.api.espn.com/apis/site/v2/sports";
 const CORE_BASE = "https://site.api.espn.com/apis/v2/sports";
 
+/** Football seasons are named for the fall kickoff year; Jan-Jun still belongs
+ * to the previous fall's season. */
+function fallSeasonYear(now: Date): number {
+  const month = now.getUTCMonth() + 1;
+  return month <= 6 ? now.getUTCFullYear() - 1 : now.getUTCFullYear();
+}
+
 /** ESPN buckets college football under an empty "Preseason" schedule (zero
  * events) until it decides the regular season has started, even once real
  * games are on the calendar. Ask explicitly for the regular season (or bowls
  * in January) so a team's next game actually resolves before kickoff. */
 function ncaafScheduleQuery(now: Date): string {
   const month = now.getUTCMonth() + 1;
-  const seasonYear = month <= 6 ? now.getUTCFullYear() - 1 : now.getUTCFullYear();
+  const seasonYear = fallSeasonYear(now);
   const seasonType = month === 1 ? 3 : 2; // 2 = regular season, 3 = postseason/bowls
   return `?season=${seasonYear}&seasontype=${seasonType}`;
 }
 
+/** Without an explicit season type, ESPN keeps NFL team schedules in the
+ * preseason bucket during August. That made Lions preseason games look like
+ * real dashboard-worthy NFL activity. */
+function nflScheduleQuery(now: Date): string {
+  return `?season=${fallSeasonYear(now)}&seasontype=2`;
+}
+
 export function scheduleUrl(sport: Sport, teamSlug: string, now: Date = new Date()): string {
   const base = `${SITE_BASE}/${ESPN_SPORT_PATH[sport]}/teams/${teamSlug}/schedule`;
-  return sport === "ncaaf" ? `${base}${ncaafScheduleQuery(now)}` : base;
+  if (sport === "ncaaf") return `${base}${ncaafScheduleQuery(now)}`;
+  if (sport === "nfl") return `${base}${nflScheduleQuery(now)}`;
+  return base;
 }
 
 /** `dateYmd` ("YYYYMMDD") scopes the scoreboard to one day. Without it, ESPN
@@ -146,6 +162,28 @@ export interface ScheduleResult {
   liveEventId?: string;
 }
 
+export interface ScheduleFilterOptions {
+  /** ESPN seasonType ids to keep. NFL: 1=preseason, 2=regular, 3=postseason. */
+  allowedSeasonTypes?: number[];
+}
+
+function seasonTypeId(event: Any): number | undefined {
+  const raw =
+    event?.seasonType?.id ??
+    event?.seasonType?.type ??
+    event?.season?.type ??
+    event?.competitions?.[0]?.seasonType?.id;
+  const id = Number(raw);
+  return Number.isFinite(id) ? id : undefined;
+}
+
+function isAllowedSeasonEvent(event: Any, options?: ScheduleFilterOptions): boolean {
+  const allowed = options?.allowedSeasonTypes;
+  if (!allowed?.length) return true;
+  const id = seasonTypeId(event);
+  return id == null || allowed.includes(id);
+}
+
 /** Extract a live situation from an ESPN competition. Bases/outs come from
  * competition.situation when present (the scoreboard endpoint has it; the team
  * schedule endpoint usually only has the inning detail). */
@@ -189,8 +227,13 @@ function liveFrom(event: Any, teamAbbr: string): LiveSituation | undefined {
 
 /** Find the team's in-progress game in a scoreboard payload (which carries the
  * full live score + situation) and extract it. */
-export function liveFromScoreboard(raw: Any, teamAbbr: string): LiveSituation | undefined {
+export function liveFromScoreboard(
+  raw: Any,
+  teamAbbr: string,
+  options?: ScheduleFilterOptions,
+): LiveSituation | undefined {
   for (const ev of raw?.events ?? []) {
+    if (!isAllowedSeasonEvent(ev, options)) continue;
     const comp = ev.competitions?.[0];
     if (comp?.status?.type?.state !== "in") continue;
     if (!(comp.competitors ?? []).some((c: Any) => c.team?.abbreviation === teamAbbr)) continue;
@@ -472,8 +515,13 @@ export interface LiveDetails {
 /** The team's event in a scoreboard payload regardless of state (pre/in/post),
  * or undefined if the team has no game on today's slate. Lets callers read the
  * real-time game state instead of trusting the longer-cached team schedule. */
-export function findTeamEventInScoreboard(raw: Any, teamAbbr: string): Any | undefined {
+export function findTeamEventInScoreboard(
+  raw: Any,
+  teamAbbr: string,
+  options?: ScheduleFilterOptions,
+): Any | undefined {
   for (const ev of raw?.events ?? []) {
+    if (!isAllowedSeasonEvent(ev, options)) continue;
     const comp = ev.competitions?.[0];
     if ((comp?.competitors ?? []).some((c: Any) => c.team?.abbreviation === teamAbbr)) {
       return ev;
@@ -484,8 +532,13 @@ export function findTeamEventInScoreboard(raw: Any, teamAbbr: string): Any | und
 
 /** Find the team's in-progress game in a scoreboard payload and extract the
  * full live situation, the event id (for a summary fetch), and top players. */
-export function liveDetailsFromScoreboard(raw: Any, teamAbbr: string): LiveDetails {
+export function liveDetailsFromScoreboard(
+  raw: Any,
+  teamAbbr: string,
+  options?: ScheduleFilterOptions,
+): LiveDetails {
   for (const ev of raw?.events ?? []) {
+    if (!isAllowedSeasonEvent(ev, options)) continue;
     const comp = ev.competitions?.[0];
     if (comp?.status?.type?.state !== "in") continue;
     if (!(comp.competitors ?? []).some((c: Any) => c.team?.abbreviation === teamAbbr)) continue;
@@ -550,9 +603,8 @@ function gameFrom(
 }
 
 function isPlayoffEvent(event: Any): boolean {
-  const seasonType = event?.seasonType;
   // ESPN seasonType id 3 = postseason across sports.
-  return seasonType?.id === "3" || seasonType?.id === 3;
+  return seasonTypeId(event) === 3;
 }
 
 /** Reduce an ESPN team schedule into last/next game and live/today flags. */
@@ -561,8 +613,11 @@ export function normalizeScheduleToGames(
   teamAbbr: string,
   now: Date,
   timeZone: string = DEFAULT_TZ,
+  options?: ScheduleFilterOptions,
 ): ScheduleResult {
-  const events: Any[] = (raw?.events ?? []).filter((e: Any) => e?.date);
+  const events: Any[] = (raw?.events ?? []).filter(
+    (e: Any) => e?.date && isAllowedSeasonEvent(e, options),
+  );
   events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   let lastEvent: Any | undefined;
@@ -776,12 +831,14 @@ export function createEspnAdapter(config: EspnAdapterConfig): EspnAdapter {
 
   async function getTeamSummary(team: WatchedTeam): Promise<TeamSummary> {
     const abbr = abbrOf(team);
+    const scheduleFilter =
+      config.sport === "nfl" ? { allowedSeasonTypes: [2, 3] } : undefined;
     const schedule = await cache.getOrLoad(
       `schedule:${config.sport}:${team.espnTeamSlug}`,
       ttlMs,
       () => fetchJson(scheduleUrl(config.sport, team.espnTeamSlug, now())),
     );
-    const games = normalizeScheduleToGames(schedule, abbr, now(), timeZone);
+    const games = normalizeScheduleToGames(schedule, abbr, now(), timeZone, scheduleFilter);
 
     // The team schedule is cached for up to 30 minutes, so it lags both first
     // pitch and the final out: a game can be underway (or already over) while
@@ -799,11 +856,11 @@ export function createEspnAdapter(config: EspnAdapterConfig): EspnAdapter {
     } catch {
       // scoreboard is best-effort; fall back to the schedule-derived state
     }
-    const sbEvent = sb ? findTeamEventInScoreboard(sb, abbr) : undefined;
+    const sbEvent = sb ? findTeamEventInScoreboard(sb, abbr, scheduleFilter) : undefined;
     const sbState = sbEvent?.competitions?.[0]?.status?.type?.state as
       | string
       | undefined;
-    const sbDetails: LiveDetails = sb ? liveDetailsFromScoreboard(sb, abbr) : {};
+    const sbDetails: LiveDetails = sb ? liveDetailsFromScoreboard(sb, abbr, scheduleFilter) : {};
 
     // Live only when the scoreboard says "in". If the scoreboard knows the game
     // but it's final, trust that over the stale schedule — otherwise a finished

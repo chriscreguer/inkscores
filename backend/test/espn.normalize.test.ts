@@ -4,6 +4,7 @@ import {
   normalizeStandings,
   findLeafGroupByName,
   formatDisplayTime,
+  scheduleUrl,
 } from "../src/adapters/espn.js";
 import schedule from "../fixtures/espn-schedule.sample.json" with { type: "json" };
 import standings from "../fixtures/espn-standings.sample.json" with { type: "json" };
@@ -50,6 +51,72 @@ describe("normalizeScheduleToGames", () => {
     const earlier = new Date("2026-06-19T00:00:00Z");
     const r = normalizeScheduleToGames(schedule, "DET", earlier);
     expect(r.lastGame).toMatchObject({ result: "L", score: "2-4", opponent: "CLE" });
+  });
+
+  it("can filter NFL preseason games out of normalized summaries", () => {
+    const raw = {
+      events: [
+        {
+          date: "2026-08-22T16:00:00Z",
+          seasonType: { id: "1", type: 1, name: "Preseason" },
+          competitions: [
+            {
+              status: { type: { state: "post", completed: true } },
+              competitors: [
+                { homeAway: "home", team: { abbreviation: "DET" }, score: "10", winner: true },
+                { homeAway: "away", team: { abbreviation: "WSH" }, score: "7", winner: false },
+              ],
+            },
+          ],
+        },
+        {
+          date: "2026-08-29T17:00:00Z",
+          seasonType: { id: "1", type: 1, name: "Preseason" },
+          competitions: [
+            {
+              status: { type: { state: "pre", completed: false } },
+              competitors: [
+                { homeAway: "away", team: { abbreviation: "DET" } },
+                { homeAway: "home", team: { abbreviation: "IND" } },
+              ],
+            },
+          ],
+        },
+        {
+          date: "2026-09-13T17:00:00Z",
+          seasonType: { id: "2", type: 2, name: "Regular Season" },
+          competitions: [
+            {
+              status: { type: { state: "pre", completed: false } },
+              competitors: [
+                { homeAway: "home", team: { abbreviation: "DET" } },
+                { homeAway: "away", team: { abbreviation: "NO" } },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const r = normalizeScheduleToGames(
+      raw,
+      "DET",
+      new Date("2026-08-26T12:00:00Z"),
+      "America/Chicago",
+      { allowedSeasonTypes: [2, 3] },
+    );
+
+    expect(r.lastGame).toBeUndefined();
+    expect(r.hasGameToday).toBe(false);
+    expect(r.nextGame).toMatchObject({ opponent: "NO" });
+  });
+});
+
+describe("scheduleUrl", () => {
+  it("requests NFL regular-season schedules explicitly so preseason is excluded", () => {
+    expect(scheduleUrl("nfl", "det", new Date("2026-08-26T12:00:00Z"))).toBe(
+      "https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams/det/schedule?season=2026&seasontype=2",
+    );
   });
 });
 

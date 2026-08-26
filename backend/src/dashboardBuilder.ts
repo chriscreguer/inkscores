@@ -60,6 +60,7 @@ function contextFor(now: Date, summary?: TeamSummary): TeamContext {
   return {
     now,
     hasLiveGame: summary?.isLive,
+    hasGameToday: summary?.hasGameToday,
     hasPlayoffOrTournamentContext: summary?.hasPlayoffContext,
     ...(summary?.lastGame ? { lastGame: { date: summary.lastGame.date } } : {}),
     ...(summary?.nextGame ? { nextGame: { date: summary.nextGame.date } } : {}),

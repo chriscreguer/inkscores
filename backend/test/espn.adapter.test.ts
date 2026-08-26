@@ -16,6 +16,17 @@ const tigers: WatchedTeam = {
   priority: 1,
 };
 
+const lions: WatchedTeam = {
+  key: "lions",
+  label: "Lions",
+  fullName: "Detroit Lions",
+  sport: "nfl",
+  league: "NFL",
+  espnTeamSlug: "det",
+  standingsGroup: "NFC North",
+  priority: 3,
+};
+
 function adapterWith(fetchJson = vi.fn()) {
   return createEspnAdapter({
     sport: "mlb",
@@ -185,6 +196,65 @@ describe("createEspnAdapter.getTeamSummary", () => {
     // surfaces the final score, and the ended game doesn't masquerade as "next"
     expect(summary.lastGame).toMatchObject({ result: "W", score: "6-3", opponent: "MIN" });
     expect(summary.nextGame).toBeUndefined();
+  });
+
+  it("does not let NFL preseason scoreboard events activate game day", async () => {
+    const regularSchedule = {
+      events: [
+        {
+          date: "2026-09-13T17:00:00Z",
+          seasonType: { id: "2", type: 2, name: "Regular Season" },
+          competitions: [
+            {
+              status: { type: { state: "pre", completed: false } },
+              competitors: [
+                { homeAway: "home", team: { abbreviation: "DET" } },
+                { homeAway: "away", team: { abbreviation: "NO" } },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const preseasonScoreboard = {
+      events: [
+        {
+          id: "999",
+          date: "2026-08-29T17:00:00Z",
+          seasonType: { id: "1", type: 1, name: "Preseason" },
+          competitions: [
+            {
+              status: { type: { state: "pre", completed: false } },
+              competitors: [
+                { homeAway: "away", team: { abbreviation: "DET" } },
+                { homeAway: "home", team: { abbreviation: "IND" } },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const fetchJson = vi.fn(async (url: string) => {
+      if (url.includes("/schedule")) return regularSchedule;
+      if (url.includes("/scoreboard")) return preseasonScoreboard;
+      return {};
+    });
+    const adapter = createEspnAdapter({
+      sport: "nfl",
+      groupNameMap: { "NFC North": "National Football Conference North" },
+      deps: {
+        fetchJson,
+        cache: new TtlCache(),
+        now: () => new Date("2026-08-29T13:00:00Z"),
+      },
+    });
+
+    const summary = await adapter.getTeamSummary(lions);
+
+    expect(summary.hasGameToday).toBe(false);
+    expect(summary.isLive).toBe(false);
+    expect(summary.nextGame).toMatchObject({ opponent: "NO" });
+    expect(fetchJson).toHaveBeenCalledWith(expect.stringContaining("seasontype=2"));
   });
 
   it("caches upstream calls across two summary fetches", async () => {

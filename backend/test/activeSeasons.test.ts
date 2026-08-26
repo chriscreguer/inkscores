@@ -29,6 +29,17 @@ const nbaTeam: WatchedTeam = {
   priority: 3,
 };
 
+const nflTeam: WatchedTeam = {
+  key: "lions",
+  label: "Lions",
+  fullName: "Detroit Lions",
+  sport: "nfl",
+  league: "NFL",
+  espnTeamSlug: "det",
+  standingsGroup: "NFC North",
+  priority: 3,
+};
+
 // Use UTC dates to keep month math deterministic across CI timezones.
 const d = (iso: string) => new Date(iso);
 
@@ -100,6 +111,32 @@ describe("isTeamActive", () => {
   it("a game 20 days out does NOT force active", () => {
     const ctx: TeamContext = { now: june, nextGame: { date: "2026-07-05T00:00:00Z" } };
     expect(isTeamActive(nbaTeam, ctx)).toBe(false);
+  });
+
+  it("NFL is hidden before the real season even with an upcoming regular-season game", () => {
+    const ctx: TeamContext = {
+      now: d("2026-09-01T12:00:00Z"),
+      nextGame: { date: "2026-09-13T17:00:00Z" },
+    };
+    expect(isTeamActive(nflTeam, ctx)).toBe(false);
+  });
+
+  it("NFL is active on a regular-season game day", () => {
+    const ctx: TeamContext = {
+      now: d("2026-09-13T12:00:00Z"),
+      hasGameToday: true,
+      nextGame: { date: "2026-09-13T17:00:00Z" },
+    };
+    expect(isTeamActive(nflTeam, ctx)).toBe(true);
+  });
+
+  it("NFL is active after its first regular-season game has been played", () => {
+    const ctx: TeamContext = {
+      now: d("2026-09-20T12:00:00Z"),
+      lastGame: { date: "2026-09-13T17:00:00Z" },
+      nextGame: { date: "2026-09-27T17:00:00Z" },
+    };
+    expect(isTeamActive(nflTeam, ctx)).toBe(true);
   });
 });
 
