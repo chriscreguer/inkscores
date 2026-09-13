@@ -55,10 +55,51 @@ SPIClass hspi(HSPI);
        ? EPD::HEIGHT \
        : (MAX_DISPLAY_BUFFER_SIZE) / (EPD::WIDTH / 2))
 
+// GxEPD2 hard-codes a 20 s ceiling on every BUSY wait for this panel
+// (GxEPD2_730c_GDEP073E01's constructor passes busy_timeout = 20000000 us).
+// A Spectra 6 full refresh measures ~12.5 s at room temperature, but the
+// waveform gets substantially slower as the panel gets colder. When it runs
+// past 20 s the wait gives up, refresh() returns as though it had finished,
+// and GxEPD2_7C::nextPage() immediately sends POF and deep-sleep to a panel
+// whose waveform is still running -- freezing the pigment mid-transit and
+// leaving a dark, half-drawn screen until the next wake.
+//
+// _busy_timeout is protected, so subclass the panel purely to widen it. The
+// wait still ends as soon as BUSY deasserts; this only raises the ceiling.
+#define INKSCORES_BUSY_TIMEOUT_US 60000000UL
+
+class InkScoresPanel : public GxEPD2_730c_GDEP073E01 {
+ public:
+  InkScoresPanel(int16_t cs, int16_t dc, int16_t rst, int16_t busy)
+      : GxEPD2_730c_GDEP073E01(cs, dc, rst, busy) {
+    _busy_timeout = INKSCORES_BUSY_TIMEOUT_US;
+  }
+};
+
 // E Ink Spectra 6 (E6) 7.3" panel as shipped on the reTerminal E1002.
 // Inks: black, white, red, yellow, green, blue (no orange).
-GxEPD2_7C<GxEPD2_730c_GDEP073E01, MAX_HEIGHT(GxEPD2_730c_GDEP073E01)> display(
-    GxEPD2_730c_GDEP073E01(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
+GxEPD2_7C<InkScoresPanel, MAX_HEIGHT(InkScoresPanel)> display(
+    InkScoresPanel(EPD_CS, EPD_DC, EPD_RST, EPD_BUSY));
+
+namespace {
+
+// Set by every render path so main.cpp can tell a completed refresh from one
+// that hit the BUSY ceiling and was therefore cut off mid-waveform.
+RenderOutcome g_last_render = {0, false};
+
+// A healthy full refresh is ~12.5 s of panel time plus a couple of seconds of
+// paged drawing and SPI. Hitting the ceiling means the wait was abandoned.
+void recordRenderOutcome(uint32_t started_ms) {
+  g_last_render.durationMs = millis() - started_ms;
+  g_last_render.truncated =
+      g_last_render.durationMs >= (INKSCORES_BUSY_TIMEOUT_US / 1000UL);
+}
+
+}  // namespace
+
+RenderOutcome lastRenderOutcome() {
+  return g_last_render;
+}
 
 namespace {
 
@@ -623,6 +664,7 @@ void renderDashboard(const JsonDocument& doc, FetchStatus status) {
   String footer = doc["footer"] | "Sports";
   if (status == FetchStatus::Cached) footer = "Cached - " + footer;
 
+  const uint32_t started = millis();
   display.setFullWindow();
   display.firstPage();
   do {
@@ -671,6 +713,7 @@ void renderDashboard(const JsonDocument& doc, FetchStatus status) {
 
     renderFooter(footer);
   } while (display.nextPage());
+  recordRenderOutcome(started);
 
   display.hibernate();
 }
@@ -682,6 +725,7 @@ void renderPreviewImage4bpp(const uint8_t* data, size_t length, int width, int h
     return;
   }
 
+  const uint32_t started = millis();
   display.setRotation(width < height ? PORTRAIT_DISPLAY_ROTATION : 0);
   display.setFullWindow();
   display.firstPage();
@@ -697,12 +741,14 @@ void renderPreviewImage4bpp(const uint8_t* data, size_t length, int width, int h
       }
     }
   } while (display.nextPage());
+  recordRenderOutcome(started);
 
   display.hibernate();
 }
 
 void renderError(const char* reason) {
   using namespace layout;
+  const uint32_t started = millis();
   display.setFullWindow();
   display.firstPage();
   do {
@@ -711,5 +757,6 @@ void renderError(const char* reason) {
     drawText(kMargin, 130, String(reason), 2, GxEPD_BLACK);
     drawText(kMargin, 160, "Will retry shortly.", 2, GxEPD_BLACK);
   } while (display.nextPage());
+  recordRenderOutcome(started);
   display.hibernate();
 }

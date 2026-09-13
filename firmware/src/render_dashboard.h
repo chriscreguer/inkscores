@@ -4,6 +4,17 @@
 
 #include "fetch_dashboard.h"
 
+// How a render finished. A Spectra 6 full refresh takes ~12.5 s of panel time;
+// `truncated` means the BUSY wait hit its ceiling instead of the panel
+// reporting done, so the waveform was cut off and the screen is left dark and
+// half-drawn. Valid after any of the render calls below.
+struct RenderOutcome {
+  uint32_t durationMs;
+  bool truncated;
+};
+
+RenderOutcome lastRenderOutcome();
+
 // Initialise the ePaper panel. Call once in setup() before rendering.
 void initDisplay();
 
