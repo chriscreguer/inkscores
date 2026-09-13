@@ -29,7 +29,7 @@ See [`PROJECT_MANIFESTO.md`](./PROJECT_MANIFESTO.md) for the full product spec.
 inkscores/
   backend/      Node + Express + TypeScript service (the brains)
   firmware/     PlatformIO / Arduino firmware for the ESP32-S3
-  docs/         API contract, layout, and data-source notes
+  docs/         API contract, layout, refresh behaviour, and data-source notes
 ```
 
 ## Backend
@@ -81,7 +81,10 @@ The firmware wakes, connects to Wi-Fi, fetches the dashboard image or JSON,
 renders it, then deep-sleeps for `refreshAfterSeconds`. If Wi-Fi is unavailable,
 it leaves the ePaper screen unchanged and retries sooner. Failed fetches after a
 network connection still fall back to the last cached dashboard, or an error
-screen. See [`docs/layout.md`](./docs/layout.md).
+screen. See [`docs/layout.md`](./docs/layout.md) for the screen layout and
+[`docs/display-refresh.md`](./docs/display-refresh.md) for how the ePaper
+refresh behaves, what the serial log means, and the dark-screen failure it
+used to hit.
 If `src/sf_pro_fonts.h` exists, the renderer uses those generated SF Pro bitmap
 fonts; otherwise it falls back to the built-in Adafruit GFX bitmap font.
 

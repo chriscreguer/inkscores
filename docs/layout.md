@@ -1,7 +1,8 @@
 # Layout
 
 Display: **800×480 landscape**, E Ink Spectra 6 (E6) ePaper. Slow refresh, low
-power — static screens only, no animation or scrolling.
+power — static screens only, no animation or scrolling. A full refresh takes
+~31.7 s on this panel; see [`display-refresh.md`](./display-refresh.md).
 
 ## MVP layout (MLB season)
 
