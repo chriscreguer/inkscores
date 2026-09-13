@@ -14,8 +14,9 @@
 // firmware defaults to the production InkScores endpoint.
 // #define DASHBOARD_IMAGE_URL "https://your-domain.com/api/dashboard.4bpp"
 
-// Front buttons that wake the device from deep sleep (all active-low). Every
-// wake re-fetches and re-renders; these only choose the view:
+// Front buttons that wake the device from deep sleep (all active-low). When
+// Wi-Fi is available, every wake re-fetches and re-renders; these only choose
+// the view:
 //   green (GPIO3)       -> refresh the current view, no mode change
 //   left white (GPIO5)  -> landscape (view 1)
 //   right white (GPIO4) -> portrait  (view 2)

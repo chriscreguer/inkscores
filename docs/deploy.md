@@ -64,9 +64,11 @@ Now each summary is generated once and survives restarts. Delete the volume's
 
 Render's **free** web services spin down after ~15 minutes idle and take
 ~30–60s to wake. The firmware's HTTP timeout is **8s**, so the first poll after
-an idle period will time out — the device then renders its last cached payload
-and retries on its next wake. That's tolerable (the dashboard is glanceable, not
-live), but for reliable refreshes either:
+an idle period may time out after Wi-Fi connects; the JSON fallback can then
+render its last cached payload and retry on its next wake. If Wi-Fi itself is
+unavailable, the device leaves the existing ePaper image unchanged and sleeps.
+That's tolerable (the dashboard is glanceable, not live), but for reliable
+refreshes either:
 
 - use a paid always-on instance (no spin-down), **or**
 - keep it warm with a free uptime monitor pinging `/healthz` every ~10 minutes.

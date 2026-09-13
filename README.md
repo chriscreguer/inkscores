@@ -77,10 +77,11 @@ pio run --target upload                 # flash
 pio device monitor                      # serial logs
 ```
 
-The firmware wakes, connects to Wi-Fi, fetches the dashboard JSON, renders the
-header + two team cards + two standings tables, then deep-sleeps for
-`refreshAfterSeconds`. Failed fetches fall back to the last cached dashboard, or
-an error screen, and retry sooner. See [`docs/layout.md`](./docs/layout.md).
+The firmware wakes, connects to Wi-Fi, fetches the dashboard image or JSON,
+renders it, then deep-sleeps for `refreshAfterSeconds`. If Wi-Fi is unavailable,
+it leaves the ePaper screen unchanged and retries sooner. Failed fetches after a
+network connection still fall back to the last cached dashboard, or an error
+screen. See [`docs/layout.md`](./docs/layout.md).
 If `src/sf_pro_fonts.h` exists, the renderer uses those generated SF Pro bitmap
 fonts; otherwise it falls back to the built-in Adafruit GFX bitmap font.
 
