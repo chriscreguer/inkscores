@@ -56,13 +56,18 @@ SPIClass hspi(HSPI);
        : (MAX_DISPLAY_BUFFER_SIZE) / (EPD::WIDTH / 2))
 
 // GxEPD2 hard-codes a 20 s ceiling on every BUSY wait for this panel
-// (GxEPD2_730c_GDEP073E01's constructor passes busy_timeout = 20000000 us).
-// A Spectra 6 full refresh measures ~12.5 s at room temperature, but the
-// waveform gets substantially slower as the panel gets colder. When it runs
-// past 20 s the wait gives up, refresh() returns as though it had finished,
-// and GxEPD2_7C::nextPage() immediately sends POF and deep-sleep to a panel
-// whose waveform is still running -- freezing the pigment mid-transit and
-// leaving a dark, half-drawn screen until the next wake.
+// (GxEPD2_730c_GDEP073E01's constructor passes busy_timeout = 20000000 us),
+// sized for the ~12.5 s full refresh the library measured. This unit is much
+// slower than that: a full render measures ~31.7 s end to end, repeatably.
+// Past the ceiling the wait gives up, refresh() returns as though it had
+// finished, and GxEPD2_7C::nextPage() immediately sends POF and deep-sleep to
+// a panel whose waveform is still running -- freezing the pigment mid-transit
+// and leaving a dark, half-drawn screen until the next wake.
+//
+// Spectra 6 picks its waveform by panel temperature, so the refresh runs
+// longer as the panel gets colder; that is what made the dark screen
+// intermittent rather than constant. 60 s leaves roughly 2x headroom over the
+// measured warm-ish case.
 //
 // _busy_timeout is protected, so subclass the panel purely to widen it. The
 // wait still ends as soon as BUSY deasserts; this only raises the ceiling.
